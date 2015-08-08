@@ -1,0 +1,16 @@
+#mac
+.DS_Store
+*.app
+
+#openFrameworks
+*.make
+Makefile
+Project.xcconfig
+openFrameworks-Info.plist
+build/
+*.gitkeep
+
+#xcode5
+*.xcodeproj
+*.pch
+*.plist
