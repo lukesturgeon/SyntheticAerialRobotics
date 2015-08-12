@@ -5,33 +5,42 @@
  * By Luke Sturgeon <hello@lukesturgeon.co.uk>
  */
 
+#include <TimerOne.h>;
 #include "SingleStepper.h";
 
 StepperModule motorA;
 
-bool isSystemLocked = true;
+volatile bool isSystemLocked = true;
 
 void setup() {
   motorA.setup(2, 3, 4);
+
+  Timer1.initialize(10000);
+  Timer1.attachInterrupt(stepMotor);  // stepMotor to run every 10 milliseconds
+
   Serial.begin(9600);
 }
 
-void loop() {
-
+void stepMotor()
+{
   if ( motorA.isCalibratingIn || motorA.isCalibratingOut ) {
     motorA.doNextCalibration();
-    delay( 10 );
   }
 
   if (!isSystemLocked && !motorA.isLocked() ) {
     // step once
     motorA.doNextStep();
-    delay( 10 );
   }
   else {
     // lock the setup
     isSystemLocked = true;
   }
+}
+
+void loop() {
+
+  // later we might do stuff here
+
 }
 
 void serialEvent() {
@@ -40,6 +49,14 @@ void serialEvent() {
 
     // Convert buffer to a string
     String str = String(buffer);
+
+    bool tmp_isSystemLocked;
+
+    // to read the isSystemLocked variable we must
+    // temporarily disable interrupts and make a copy
+    noInterrupts();
+    tmp_isSystemLocked = isSystemLocked;
+    interrupts();
 
     if ( str.equals("u") ) {
       isSystemLocked = false;
@@ -64,6 +81,9 @@ void serialEvent() {
     if ( str.equals("c") ) {
       isSystemLocked = true;
       motorA.calibrate();
+      // send lock status
+      Serial.print("l=");
+      Serial.println(true);
     }
 
     if ( str.equals("z") ) {
