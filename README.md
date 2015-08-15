@@ -1,6 +1,6 @@
 # SyntheticAerialRobotics #
 
-Working repository for control software and Arduino code to choreograph a robotic performance. Using 4 stepper motors, drivers and software.
+Working repository for control software and Arduino code to choreograph a robotic performance. Using 4 stepper motors, drivers and software. This repository is started during a two month residency at [Laboratory](laboratoryspokane.com) Spokane and is a development of an original project [Choreographed Synthetic Temperaments in Aerial Robotics](http://lukesturgeon.co.uk/Choreographed-Synthetic-Temperaments-in-Aerial-Robotics).
 
 ---
 
