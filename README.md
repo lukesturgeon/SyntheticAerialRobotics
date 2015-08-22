@@ -19,6 +19,9 @@ A working sketch that allows serial communication to control and calibrate two s
 ##### single_stepper_controller
 A working sketch that includes all basic interface elements necessary to interact with a single motor.
 
+##### SyntheticAerialRoboticsInterface
+A working sketch to visualise and measure the position of the actor in 3D space. Using real-world measurements in MM to construct the box, all values afterwards will work at that scale.
+
 ---
 
 ## Datasheets ##
