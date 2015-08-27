@@ -1,16 +1,23 @@
-import controlP5.*;
+import controlP5.*; //<>//
 
-float widthMM = 1000; // left to right (in mm)
-float depthMM = 1000; // front to back (in mm)
-float heightMM = 800; // top to bottom (in mm)
+float     widthCM = 1500; // left to right (in cm)
+float     depthCM = 1500; // front to back (in cm)
+float     heightCM = 800; // top to bottom (in cm)
 
-float scaleMM = -1000.0; // default size to scale down to
-float worldRotationX = 0.0;
-float worldRotationY = 0.0;
+float     scaleCM = -1200.0; // default size to scale down to
+float     worldRotationX = 0.0;
+float     worldRotationY = 0.0;
 
-PVector[] motorPositions = new PVector[4];
-float[] motorLengths = new float[4];
-PVector actorPosition = new PVector();
+PVector[] motorPositions;
+float[]   motorLengths;
+PVector   actorTarget;
+PVector   actorPosition;
+
+Table     recordData;
+int       recordTimer;
+boolean   isRecording;
+boolean   isPlaying;
+int       playbackPosition;
 
 ControlP5 cp5;
 
@@ -18,63 +25,106 @@ void setup() {
   size(1024, 768, P3D);
   smooth(8);
 
-  motorPositions[0] = new PVector(-widthMM/2, -heightMM/2, -depthMM/2);
-  motorPositions[1] = new PVector(widthMM/2, -heightMM/2, -depthMM/2);
-  motorPositions[2] = new PVector(widthMM/2, -heightMM/2, depthMM/2);
-  motorPositions[3] = new PVector(-widthMM/2, -heightMM/2, depthMM/2);
+  isRecording = false;
+  recordData = new Table();
+  recordData.addColumn("x");
+  recordData.addColumn("y");
+  recordData.addColumn("z");
+
+  motorLengths = new float[4];
+  motorPositions = new PVector[4];
+  motorPositions[0] = new PVector(-widthCM/2, -heightCM/2, -depthCM/2);
+  motorPositions[1] = new PVector(widthCM/2, -heightCM/2, -depthCM/2);
+  motorPositions[2] = new PVector(widthCM/2, -heightCM/2, depthCM/2);
+  motorPositions[3] = new PVector(-widthCM/2, -heightCM/2, depthCM/2);
 
   // start in center of floor
-  actorPosition.set(0, heightMM/2, 0);
+  actorTarget  = new PVector(0, heightCM/2, 0);
+  actorPosition = actorTarget.get();
 
   cp5 = new ControlP5(this);
-  cp5.addSlider("scaleMM").
-    setRange(-1500, 1500).
-    setValue(scaleMM).
-    setSize(150, 20);
+  cp5.addToggle("isRecording")
+    .setSize(60, 20);
+  cp5.addButton("loadData")
+    .setLabel("loaddata...");
+  cp5.addButton("playback");
 }
 
 void update() {
   for (int i = 0; i < 4; i++) {
-    motorLengths[i] = ceil( actorPosition.dist(motorPositions[i]) );
+    motorLengths[i] = actorTarget.dist(motorPositions[i]);
+  }
+
+  // are we recording
+  if (isRecording && (millis()-recordTimer) > 250) {
+    TableRow newData = recordData.addRow();
+    newData.setFloat("x", actorTarget.x);
+    newData.setFloat("y", actorTarget.y);
+    newData.setFloat("z", actorTarget.z);
+    recordTimer = millis();
+  }
+
+  // are we playing
+  else if (isPlaying && (millis()-recordTimer) > 250) {
+    // update the target position
+    actorTarget.set( 
+      recordData.getFloat(playbackPosition, "x"), 
+      recordData.getFloat(playbackPosition, "y"), 
+      recordData.getFloat(playbackPosition, "z")  ); 
+
+    if (playbackPosition < recordData.getRowCount()-1) {
+      playbackPosition++;
+    } else {
+      isPlaying = false;
+    }
+
+    recordTimer = millis();
   }
 }
 
 void draw() {
   update();
 
-  background(0);
+  background(0,0,0);
 
   pushMatrix();
-  translate(width/2, height/2, scaleMM);
+  translate(width/2, (height/2), scaleCM);
   rotateX(worldRotationX);
   rotateY(worldRotationY);
 
   //draw frame
   noFill();
-  stroke(255);
-  box(widthMM, heightMM, depthMM);
+  stroke(#444444);
+  box(widthCM, heightCM, depthCM);
 
   // draw floor
   for (int i = 0; i < 10; i++) {
-    line(-widthMM/2, heightMM/2, map(i, 0, 10, depthMM/2, -depthMM/2), 
-      widthMM/2, heightMM/2, map(i, 0, 10, depthMM/2, -depthMM/2));
-    line(map(i, 0, 10, -widthMM/2, widthMM/2), heightMM/2, -depthMM/2, 
-      map(i, 0, 10, -widthMM/2, widthMM/2), heightMM/2, depthMM/2);
+    line(-widthCM/2, heightCM/2, map(i, 0, 10, depthCM/2, -depthCM/2), 
+      widthCM/2, heightCM/2, map(i, 0, 10, depthCM/2, -depthCM/2));
+    line(map(i, 0, 10, -widthCM/2, widthCM/2), heightCM/2, -depthCM/2, 
+      map(i, 0, 10, -widthCM/2, widthCM/2), heightCM/2, depthCM/2);
   }
 
   // draw cables
+  stroke(255);
   for (int i = 0; i < 4; i++) {
     line(motorPositions[i].x, motorPositions[i].y, motorPositions[i].z, 
-      actorPosition.x, actorPosition.y, actorPosition.z);
+      actorTarget.x, actorTarget.y, actorTarget.z);
   }
-
   noStroke();
 
-  // draw actor
+  // draw actorTarget
   pushMatrix();
   fill(255);
+  translate(actorTarget.x, actorTarget.y, actorTarget.z);
+  sphere(20);
+  popMatrix();
+
+  // draw actorPosition
+  pushMatrix();
+  fill(255, 0, 255);
   translate(actorPosition.x, actorPosition.y, actorPosition.z);
-  sphere(10);
+  sphere(20);
   popMatrix();
 
   // draw motor A
@@ -105,22 +155,138 @@ void draw() {
   sphere(10);
   popMatrix();
 
+  // draw the recorded motion?
+  stroke(255, 255, 0);
+  noFill();
+  beginShape();
+  for ( TableRow row : recordData.rows() ) {
+    vertex( row.getFloat("x"), row.getFloat("y"), row.getFloat("z") );
+  }
+  endShape();
+
+  // store the 0,0,0
+  float x = modelX(-widthCM/2, -heightCM/2, -depthCM/2);
+  float y = modelY(-widthCM/2, -heightCM/2, -depthCM/2);
+  float z = modelZ(-widthCM/2, -heightCM/2, -depthCM/2);
+
   //== end world translate and zoom ==//
   popMatrix();
+
+  text("ABCD", x, y, z);
 
   // output the current lengths
   text("A = "+motorLengths[0]+"\nB = "+motorLengths[1]+"\nC = "+motorLengths[2]+"\nD = "+motorLengths[3], 20, height-100);
 }
 
+void loadData() {
+  selectInput("Select a file to playback:", "dataSelected");
+}
+
+void dataSelected(File selection) {
+  if (selection == null) {
+    println("Window was closed or the user hit cancel.");
+  } else {
+    isRecording = false;
+    recordData.clearRows();
+    recordData = loadTable(selection.getAbsolutePath(), "header");
+  }
+}
+
+void isRecording(boolean b) {
+  if (b) {
+    // start recording
+    println("R* START");
+  } else {
+    // end recording
+    saveTable(recordData, "data/"+getUniqueFileName()+".csv");
+    println("R* END");
+  }
+
+  // set value
+  isRecording = b;
+}
+
+void playback() {
+  if (isRecording) {
+    println("ERROR, you shouldn't playback whilst recording");
+  }
+  // start playback from beginning
+  else if (recordData.getRowCount() > 1) {
+    playbackPosition = 0;
+    isPlaying = true;
+  } else {
+    println("you haven't recorded any data yet");
+  }
+}
+
+String getUniqueFileName() {
+  String str = "";
+
+  int y = year();
+  str += String.valueOf(y);
+
+  int j = month();
+  str += "-"+String.valueOf(j);
+
+  int d = day();
+  str += "-"+String.valueOf(d);
+
+  int h = hour();
+  str += "_"+String.valueOf(h);
+
+  int m = minute();
+  str += "-"+String.valueOf(m);
+
+  int s = second();
+  str += "-"+String.valueOf(s);
+
+  return str;
+}
 
 void mouseDragged() {
-  if (mouseButton == RIGHT) {
+  if (keyPressed && key == 'w') {
     // add x/y to the rotation
     worldRotationX -= (mouseY-pmouseY) * 0.01;
     worldRotationY += (mouseX-pmouseX) * 0.01;
-  } else {
+  } 
+
+  // lock to Y axis
+  else if (keyPressed && key == 'y') {
+    // lock to Y axis
+    actorTarget.y += mouseY-pmouseY;
+    actorTarget.y = constrain(actorTarget.y, -heightCM/2, heightCM/2);
+  } 
+
+  // lock to X axis
+  else if (keyPressed && key == 'x') {
+    float angle = worldRotationY % TWO_PI;
+    float absAngle = abs(angle);
+    if (absAngle > PI*0.75 && absAngle < PI*1.25) {
+      // back
+      actorTarget.x -= mouseX-pmouseX;
+    } else {
+      actorTarget.x += mouseX-pmouseX;
+    }
+    actorTarget.x = constrain(actorTarget.x, -widthCM/2, widthCM/2);
+  } 
+
+  // lock to Z axis
+  else if (keyPressed && key == 'z') {
+    float angle = worldRotationY % TWO_PI;
+    float absAngle = abs(angle);
+    // right side
+    if (worldRotationY > 0) {
+      actorTarget.z += mouseX-pmouseX;
+    } else {
+      actorTarget.z -= mouseX-pmouseX;
+    }
+    actorTarget.z = constrain(actorTarget.z, -depthCM/2, depthCM/2);
+  } 
+
+  // x3 axis movement
+  else if (keyPressed && key == 'q') {
     // take the y as the actor y position
-    actorPosition.y += mouseY-pmouseY;
+    actorTarget.y += mouseY-pmouseY;
 
     // take the x ans the depth or width (dpends on orientation)
     float angle = worldRotationY % TWO_PI;
@@ -128,27 +294,33 @@ void mouseDragged() {
     if (absAngle > PI*0.25 && absAngle < PI*0.75) {
       // right side
       if (worldRotationY > 0) {
-        actorPosition.z += mouseX-pmouseX;
+        actorTarget.z += mouseX-pmouseX;
       } else {
-        actorPosition.z -= mouseX-pmouseX;
+        actorTarget.z -= mouseX-pmouseX;
       }
     } else if (absAngle > PI*1.25 && absAngle<PI*1.75) {
       // left side
       if (worldRotationY > 0) {
-        actorPosition.z -= mouseX-pmouseX;
+        actorTarget.z -= mouseX-pmouseX;
       } else {
-        actorPosition.z += mouseX-pmouseX;
+        actorTarget.z += mouseX-pmouseX;
       }
     } else if (absAngle > PI*0.75 && absAngle < PI*1.25) {
       // back
-      actorPosition.x -= mouseX-pmouseX;
+      actorTarget.x -= mouseX-pmouseX;
     } else {
-      actorPosition.x += mouseX-pmouseX;
+      actorTarget.x += mouseX-pmouseX;
     }
 
     // constrain just in case
-    actorPosition.x = constrain(actorPosition.x, -widthMM/2, widthMM/2);
-    actorPosition.y = constrain(actorPosition.y, -heightMM/2, heightMM/2);
-    actorPosition.z = constrain(actorPosition.z, -depthMM/2, depthMM/2);
+    actorTarget.x = constrain(actorTarget.x, -widthCM/2, widthCM/2);
+    actorTarget.y = constrain(actorTarget.y, -heightCM/2, heightCM/2);
+    actorTarget.z = constrain(actorTarget.z, -depthCM/2, depthCM/2);
   }
+}
+
+void mouseWheel(MouseEvent e) {
+  // adjust the scale to give the impression of zoom in/out
+  float count = e.getCount() * 10;
+  scaleCM += count;
 }
