@@ -20,7 +20,7 @@ A working sketch that allows serial communication to control and calibrate two s
 A working sketch that includes all basic interface elements necessary to interact with a single motor.
 
 ##### SyntheticAerialRoboticsInterface
-A working sketch to visualise and measure the position of the actor in 3D space. Using real-world measurements in MM to construct the box, all values afterwards will work at that scale.
+A working sketch to visualise and measure the position of the actor in 3D space. Using real-world measurements in CM to construct the box, all values afterwards will work at that scale.
 
 ---
 
@@ -34,4 +34,4 @@ The specifications for the components used for this particular installation. Ste
 
 - quadstepper.fzz : The circuit diagram and components created in Fritzing.
 - powersupply.pdf : The power supply used for the installation 12V 5A
-- motor-unit.ai : The illustrator file used to fabricate the acrylic sheets to assemble the four motor units. This file is to scale but some measurements are imprecise.
+- motor-unit.ai : The illustrator file used to fabricate the acrylic sheets to assemble the four motor units. This file is to scale but some measurements are imprecise. File reflects the changes made manually to the current working acrylic sheets.
