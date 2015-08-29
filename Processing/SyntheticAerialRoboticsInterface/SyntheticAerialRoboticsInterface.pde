@@ -12,6 +12,7 @@ PVector[] motorPositions;
 float[]   motorLengths;
 PVector   actorTarget;
 PVector   actorPosition;
+float     easing = 0.1;
 
 Table     recordData;
 int       recordTimer;
@@ -48,15 +49,26 @@ void setup() {
   cp5.addButton("loadData")
     .setLabel("loaddata...");
   cp5.addButton("playback");
+  cp5.addSlider("easing").
+    setRange(0.001, 0.5);
 }
 
 void update() {
+
+  // move the actor closer to the target
+  float dx = actorTarget.x - actorPosition.x;
+  float dy = actorTarget.y - actorPosition.y;
+  float dz = actorTarget.z - actorPosition.z;
+  actorPosition.x += dx * easing;
+  actorPosition.y += dy * easing;
+  actorPosition.z += dz * easing;
+
   for (int i = 0; i < 4; i++) {
-    motorLengths[i] = actorTarget.dist(motorPositions[i]);
+    motorLengths[i] = actorPosition.dist(motorPositions[i]);
   }
 
   // are we recording
-  if (isRecording && (millis()-recordTimer) > 250) {
+  if (isRecording && (millis()-recordTimer) > 125) {
     TableRow newData = recordData.addRow();
     newData.setFloat("x", actorTarget.x);
     newData.setFloat("y", actorTarget.y);
@@ -65,7 +77,7 @@ void update() {
   }
 
   // are we playing
-  else if (isPlaying && (millis()-recordTimer) > 250) {
+  else if (isPlaying && (millis()-recordTimer) > 125) {
     // update the target position
     actorTarget.set( 
       recordData.getFloat(playbackPosition, "x"), 
@@ -85,7 +97,7 @@ void update() {
 void draw() {
   update();
 
-  background(0,0,0);
+  background(0, 0, 0);
 
   pushMatrix();
   translate(width/2, (height/2), scaleCM);
@@ -109,20 +121,30 @@ void draw() {
   stroke(255);
   for (int i = 0; i < 4; i++) {
     line(motorPositions[i].x, motorPositions[i].y, motorPositions[i].z, 
-      actorTarget.x, actorTarget.y, actorTarget.z);
+      actorPosition.x, actorPosition.y, actorPosition.z);
   }
   noStroke();
 
   // draw actorTarget
   pushMatrix();
-  fill(255);
+  fill(100);
   translate(actorTarget.x, actorTarget.y, actorTarget.z);
   sphere(20);
   popMatrix();
 
+  stroke(50, 50, 0);
+  line(  actorTarget.x, actorTarget.y, -depthCM/2, 
+    actorTarget.x, actorTarget.y, depthCM/2  );
+  line(  -widthCM/2, actorTarget.y, actorTarget.z, 
+    widthCM/2, actorTarget.y, actorTarget.z  );
+  line(  actorTarget.x, -heightCM/2, actorTarget.z, 
+    actorTarget.x, heightCM/2, actorTarget.z  );
+
+  noStroke();
+
   // draw actorPosition
   pushMatrix();
-  fill(255, 0, 255);
+  fill(255);
   translate(actorPosition.x, actorPosition.y, actorPosition.z);
   sphere(20);
   popMatrix();
@@ -164,15 +186,8 @@ void draw() {
   }
   endShape();
 
-  // store the 0,0,0
-  float x = modelX(-widthCM/2, -heightCM/2, -depthCM/2);
-  float y = modelY(-widthCM/2, -heightCM/2, -depthCM/2);
-  float z = modelZ(-widthCM/2, -heightCM/2, -depthCM/2);
-
   //== end world translate and zoom ==//
   popMatrix();
-
-  text("ABCD", x, y, z);
 
   // output the current lengths
   text("A = "+motorLengths[0]+"\nB = "+motorLengths[1]+"\nC = "+motorLengths[2]+"\nD = "+motorLengths[3], 20, height-100);
