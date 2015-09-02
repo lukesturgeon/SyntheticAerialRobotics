@@ -1,15 +1,16 @@
 import controlP5.*; //<>//
+import processing.serial.*;
 
-float     widthCM = 1500; // left to right (in cm)
-float     depthCM = 1500; // front to back (in cm)
-float     heightCM = 800; // top to bottom (in cm)
+final float     WIDTH_CM = 1500; // left to right (in cm)
+final float     DEPTH_CM = 1500; // front to back (in cm)
+final float     HEIGHT_CM = 800; // top to bottom (in cm)
+final int       NUM_MOTORS = 4;
 
 float     scaleCM = -1200.0; // default size to scale down to
 float     worldRotationX = 0.0;
 float     worldRotationY = 0.0;
 
-PVector[] motorPositions;
-float[]   motorLengths;
+Motor3D[] motorPositions;
 PVector   actorTarget;
 PVector   actorPosition;
 float     easing = 0.1;
@@ -21,10 +22,16 @@ boolean   isPlaying;
 int       playbackPosition;
 
 ControlP5 cp5;
+String warnMessage = "";
+boolean isSystemLocked = true;
+
+Serial arduino;
 
 void setup() {
-  size(1024, 768, P3D);
+  size(1280, 800, P3D);
   smooth(8);
+
+  cp5_init();
 
   isRecording = false;
   recordData = new Table();
@@ -32,25 +39,34 @@ void setup() {
   recordData.addColumn("y");
   recordData.addColumn("z");
 
-  motorLengths = new float[4];
-  motorPositions = new PVector[4];
-  motorPositions[0] = new PVector(-widthCM/2, -heightCM/2, -depthCM/2);
-  motorPositions[1] = new PVector(widthCM/2, -heightCM/2, -depthCM/2);
-  motorPositions[2] = new PVector(widthCM/2, -heightCM/2, depthCM/2);
-  motorPositions[3] = new PVector(-widthCM/2, -heightCM/2, depthCM/2);
+  //motorLengths = new float[4];
+  motorPositions = new Motor3D[4];
+  motorPositions[0] = new Motor3D(-WIDTH_CM/2, -HEIGHT_CM/2, -DEPTH_CM/2);
+  motorPositions[1] = new Motor3D(WIDTH_CM/2, -HEIGHT_CM/2, -DEPTH_CM/2);
+  motorPositions[2] = new Motor3D(WIDTH_CM/2, -HEIGHT_CM/2, DEPTH_CM/2);
+  motorPositions[3] = new Motor3D(-WIDTH_CM/2, -HEIGHT_CM/2, DEPTH_CM/2);
 
   // start in center of floor
-  actorTarget  = new PVector(0, heightCM/2, 0);
+  actorTarget  = new PVector(0, HEIGHT_CM/2, 0);
   actorPosition = actorTarget.get();
 
-  cp5 = new ControlP5(this);
-  cp5.addToggle("isRecording")
-    .setSize(60, 20);
-  cp5.addButton("loadData")
-    .setLabel("loaddata...");
-  cp5.addButton("playback");
-  cp5.addSlider("easing").
-    setRange(0.001, 0.5);
+  // connect to arduino
+  boolean portDetected = false;
+  String portName = "/dev/tty.usbmodem411";
+
+  String[] availablePorts = Serial.list();
+  for (int i = 0; i < availablePorts.length; i++) {
+    if (availablePorts[i].equals(portName)) {
+      arduino = new Serial(this, portName, 115200);
+      arduino.bufferUntil('\n');
+      portDetected = true;
+      break;
+    }
+  }
+
+  if (!portDetected) {
+    showWarning("The Arduino was not detected! Connect Arduino USB cable and restart software.");
+  }
 }
 
 void update() {
@@ -64,7 +80,9 @@ void update() {
   actorPosition.z += dz * easing;
 
   for (int i = 0; i < 4; i++) {
-    motorLengths[i] = actorPosition.dist(motorPositions[i]);
+    motorPositions[i].calculateLengthTo( actorPosition );
+    Slider s = (Slider) cp5.getController("cp5_length"+i);
+    s.setValue(motorPositions[i].getLength());
   }
 
   // are we recording
@@ -95,6 +113,8 @@ void update() {
 }
 
 void draw() {
+
+  // run program as normal
   update();
 
   background(0, 0, 0);
@@ -107,14 +127,14 @@ void draw() {
   //draw frame
   noFill();
   stroke(#444444);
-  box(widthCM, heightCM, depthCM);
+  box(WIDTH_CM, HEIGHT_CM, DEPTH_CM);
 
   // draw floor
   for (int i = 0; i < 10; i++) {
-    line(-widthCM/2, heightCM/2, map(i, 0, 10, depthCM/2, -depthCM/2), 
-      widthCM/2, heightCM/2, map(i, 0, 10, depthCM/2, -depthCM/2));
-    line(map(i, 0, 10, -widthCM/2, widthCM/2), heightCM/2, -depthCM/2, 
-      map(i, 0, 10, -widthCM/2, widthCM/2), heightCM/2, depthCM/2);
+    line(-WIDTH_CM/2, HEIGHT_CM/2, map(i, 0, 10, DEPTH_CM/2, -DEPTH_CM/2), 
+      WIDTH_CM/2, HEIGHT_CM/2, map(i, 0, 10, DEPTH_CM/2, -DEPTH_CM/2));
+    line(map(i, 0, 10, -WIDTH_CM/2, WIDTH_CM/2), HEIGHT_CM/2, -DEPTH_CM/2, 
+      map(i, 0, 10, -WIDTH_CM/2, WIDTH_CM/2), HEIGHT_CM/2, DEPTH_CM/2);
   }
 
   // draw cables
@@ -133,12 +153,12 @@ void draw() {
   popMatrix();
 
   stroke(50, 50, 0);
-  line(  actorTarget.x, actorTarget.y, -depthCM/2, 
-    actorTarget.x, actorTarget.y, depthCM/2  );
-  line(  -widthCM/2, actorTarget.y, actorTarget.z, 
-    widthCM/2, actorTarget.y, actorTarget.z  );
-  line(  actorTarget.x, -heightCM/2, actorTarget.z, 
-    actorTarget.x, heightCM/2, actorTarget.z  );
+  line(  actorTarget.x, actorTarget.y, -DEPTH_CM/2, 
+    actorTarget.x, actorTarget.y, DEPTH_CM/2  );
+  line(  -WIDTH_CM/2, actorTarget.y, actorTarget.z, 
+    WIDTH_CM/2, actorTarget.y, actorTarget.z  );
+  line(  actorTarget.x, -HEIGHT_CM/2, actorTarget.z, 
+    actorTarget.x, HEIGHT_CM/2, actorTarget.z  );
 
   noStroke();
 
@@ -189,73 +209,25 @@ void draw() {
   //== end world translate and zoom ==//
   popMatrix();
 
-  // output the current lengths
-  text("A = "+motorLengths[0]+"\nB = "+motorLengths[1]+"\nC = "+motorLengths[2]+"\nD = "+motorLengths[3], 20, height-100);
-}
-
-void loadData() {
-  selectInput("Select a file to playback:", "dataSelected");
-}
-
-void dataSelected(File selection) {
-  if (selection == null) {
-    println("Window was closed or the user hit cancel.");
-  } else {
-    isRecording = false;
-    recordData.clearRows();
-    recordData = loadTable(selection.getAbsolutePath(), "header");
+  if ( !warnMessage.equals("") ) {
+    // there's an error
+    //pushStyle();
+    fill(255, 255, 0);
+    rect(200, 300, width-400, height-600);
+    fill(0);
+    //textSize(20);
+    textAlign(CENTER, CENTER);
+    text(warnMessage, width/2, height/2);
+    //popStyle();
   }
 }
 
-void isRecording(boolean b) {
-  if (b) {
-    // start recording
-    println("R* START");
-  } else {
-    // end recording
-    saveTable(recordData, "data/"+getUniqueFileName()+".csv");
-    println("R* END");
-  }
-
-  // set value
-  isRecording = b;
+void showWarning(String e) {
+  warnMessage = e;
 }
 
-void playback() {
-  if (isRecording) {
-    println("ERROR, you shouldn't playback whilst recording");
-  }
-  // start playback from beginning
-  else if (recordData.getRowCount() > 1) {
-    playbackPosition = 0;
-    isPlaying = true;
-  } else {
-    println("you haven't recorded any data yet");
-  }
-}
-
-String getUniqueFileName() {
-  String str = "";
-
-  int y = year();
-  str += String.valueOf(y);
-
-  int j = month();
-  str += "-"+String.valueOf(j);
-
-  int d = day();
-  str += "-"+String.valueOf(d);
-
-  int h = hour();
-  str += "_"+String.valueOf(h);
-
-  int m = minute();
-  str += "-"+String.valueOf(m);
-
-  int s = second();
-  str += "-"+String.valueOf(s);
-
-  return str;
+void clearWarning() {
+  warnMessage = "";
 }
 
 void mouseDragged() {
@@ -269,7 +241,7 @@ void mouseDragged() {
   else if (keyPressed && key == 'y') {
     // lock to Y axis
     actorTarget.y += mouseY-pmouseY;
-    actorTarget.y = constrain(actorTarget.y, -heightCM/2, heightCM/2);
+    actorTarget.y = constrain(actorTarget.y, -HEIGHT_CM/2, HEIGHT_CM/2);
   } 
 
   // lock to X axis
@@ -282,7 +254,7 @@ void mouseDragged() {
     } else {
       actorTarget.x += mouseX-pmouseX;
     }
-    actorTarget.x = constrain(actorTarget.x, -widthCM/2, widthCM/2);
+    actorTarget.x = constrain(actorTarget.x, -WIDTH_CM/2, WIDTH_CM/2);
   } 
 
   // lock to Z axis
@@ -295,7 +267,7 @@ void mouseDragged() {
     } else {
       actorTarget.z -= mouseX-pmouseX;
     }
-    actorTarget.z = constrain(actorTarget.z, -depthCM/2, depthCM/2);
+    actorTarget.z = constrain(actorTarget.z, -DEPTH_CM/2, DEPTH_CM/2);
   } 
 
   // x3 axis movement
@@ -328,9 +300,9 @@ void mouseDragged() {
     }
 
     // constrain just in case
-    actorTarget.x = constrain(actorTarget.x, -widthCM/2, widthCM/2);
-    actorTarget.y = constrain(actorTarget.y, -heightCM/2, heightCM/2);
-    actorTarget.z = constrain(actorTarget.z, -depthCM/2, depthCM/2);
+    actorTarget.x = constrain(actorTarget.x, -WIDTH_CM/2, WIDTH_CM/2);
+    actorTarget.y = constrain(actorTarget.y, -HEIGHT_CM/2, HEIGHT_CM/2);
+    actorTarget.z = constrain(actorTarget.z, -DEPTH_CM/2, DEPTH_CM/2);
   }
 }
 
@@ -338,4 +310,61 @@ void mouseWheel(MouseEvent e) {
   // adjust the scale to give the impression of zoom in/out
   float count = e.getCount() * 10;
   scaleCM += count;
+}
+
+void serialEvent(Serial p) {
+  String message = p.readString();
+  message = trim(message);
+
+  /*if ( message.substring(0, 3).equals("mm=") ) 
+   {
+   String mm = message.substring(3);
+   currentLength = int( mm );
+   } else if ( message.substring(0, 2).equals("s=") ) 
+   {
+   String s = message.substring(2);
+   currentStep = int( s );
+   cp5.getController("currentStep").setValue(currentStep);
+   } else if ( message.substring(0, 2).equals("c=") ) 
+   {
+   String c = message.substring(2);
+   println("calibration = " + c);
+   
+   
+   } else if ( message.substring(0, 2).equals("l=") ) 
+   {
+   String l = message.substring(2);
+   isSystemLocked = l.equals("1") ? true : false;
+   Toggle t = (Toggle) cp5.getController("lockToggle");
+   t.setBroadcast(false);
+   t.setValue(isSystemLocked);
+   t.setBroadcast(true);
+   } else
+   {
+   println("> "+message);
+   }*/
+
+  if ( message.substring(0, 2).equals("l=") ) 
+  {
+    String l = message.substring(2);
+    isSystemLocked = l.equals("1") ? true : false;    
+    if (isSystemLocked) {
+      showWarning("Arduino is locked. A cable is too close!");
+    } else {
+      clearWarning();
+    }
+  } else if ( message.substring(0, 2).equals("c=") ) {    
+    String[] list = split(message.substring(2), ',');
+    for (int i = 0; i < list.length; i++) {
+      // mark as calibrated
+      Toggle t = (Toggle) cp5.getController("cp5_calibrate"+i);
+      t.setBroadcast(false);
+      t.setValue( list[i].equals("1") ? true : false );
+      t.setBroadcast(true);
+    }
+  }
+  // just output the unknown reponse
+  else {
+    println("> "+message);
+  }
 }
