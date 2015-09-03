@@ -1,10 +1,9 @@
 import controlP5.*; //<>//
-import processing.serial.*;
 
 final float     WIDTH_CM = 1500; // left to right (in cm)
 final float     DEPTH_CM = 1500; // front to back (in cm)
 final float     HEIGHT_CM = 800; // top to bottom (in cm)
-final int       NUM_MOTORS = 4;
+final int       NUM_MOTORS = 4; // controls the loops and settings
 
 float     scaleCM = -1200.0; // default size to scale down to
 float     worldRotationX = 0.0;
@@ -25,7 +24,7 @@ ControlP5 cp5;
 String warnMessage = "";
 boolean isSystemLocked = true;
 
-Serial arduino;
+Serial3D serial;
 
 void setup() {
   size(1280, 800, P3D);
@@ -39,7 +38,6 @@ void setup() {
   recordData.addColumn("y");
   recordData.addColumn("z");
 
-  //motorLengths = new float[4];
   motorPositions = new Motor3D[4];
   motorPositions[0] = new Motor3D(-WIDTH_CM/2, -HEIGHT_CM/2, -DEPTH_CM/2);
   motorPositions[1] = new Motor3D(WIDTH_CM/2, -HEIGHT_CM/2, -DEPTH_CM/2);
@@ -51,22 +49,11 @@ void setup() {
   actorPosition = actorTarget.get();
 
   // connect to arduino
-  boolean portDetected = false;
-  String portName = "/dev/tty.usbmodem411";
-
-  String[] availablePorts = Serial.list();
-  for (int i = 0; i < availablePorts.length; i++) {
-    if (availablePorts[i].equals(portName)) {
-      arduino = new Serial(this, portName, 115200);
-      arduino.bufferUntil('\n');
-      portDetected = true;
-      break;
-    }
-  }
-
-  if (!portDetected) {
+  serial = new Serial3D();
+  if (!serial.connect(this, "/dev/tty.usbmodem411", 115200)) {
     showWarning("The Arduino was not detected! Connect Arduino USB cable and restart software.");
   }
+  
 }
 
 void update() {
@@ -79,7 +66,7 @@ void update() {
   actorPosition.y += dy * easing;
   actorPosition.z += dz * easing;
 
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < NUM_MOTORS; i++) {
     motorPositions[i].calculateLengthTo( actorPosition );
     Slider s = (Slider) cp5.getController("cp5_length"+i);
     s.setValue(motorPositions[i].getLength());
@@ -169,33 +156,16 @@ void draw() {
   sphere(20);
   popMatrix();
 
-  // draw motor A
-  pushMatrix();
-  fill(255, 0, 0);
-  translate(motorPositions[0].x, motorPositions[0].y, motorPositions[0].z);
-  sphere(10);
-  popMatrix();
-
-  // draw motor B
-  pushMatrix();
-  fill(255, 255, 0);
-  translate(motorPositions[1].x, motorPositions[1].y, motorPositions[1].z);
-  sphere(10);
-  popMatrix();
-
-  // draw motor C
-  pushMatrix();
-  fill(255, 0, 255);
-  translate(motorPositions[2].x, motorPositions[2].y, motorPositions[2].z);
-  sphere(10);
-  popMatrix();
-
-  // draw motor D
-  pushMatrix();
-  fill(255, 255, 255);
-  translate(motorPositions[3].x, motorPositions[3].y, motorPositions[3].z);
-  sphere(10);
-  popMatrix();
+  // draw motors
+  for (int i = 0; i < NUM_MOTORS; i++) {
+    pushMatrix();
+    pushStyle();
+    fill(255);
+    translate(motorPositions[i].x, motorPositions[i].y, motorPositions[i].z);
+    sphere(10);
+    popStyle();
+    popMatrix();
+  }
 
   // draw the recorded motion?
   stroke(255, 255, 0);

@@ -1,5 +1,8 @@
 void cp5_init() {
   cp5 = new ControlP5(this);
+  cp5.setColorBackground( color(80) );
+  cp5.setColorForeground( color(255) );
+  cp5.setColorActive( color(200) );
 
   cp5.addSlider("easing")
     .setRange(0.001, 0.5)
@@ -9,21 +12,21 @@ void cp5_init() {
   // loading prerecorded paths
   cp5.addTextlabel("recording")
     .setValueLabel("> PATH RECORDING")
-    .setPosition(20, 130);
+    .setPosition(20, 55);
 
   cp5.addButton("cp5_loadData")
     .setLabel("loaddata...")
-    .setPosition(20, 150)
+    .setPosition(20, 70)
     .setSize(150, 20);
 
   cp5.addToggle("cp5_record")
     .setLabel("Record")
-    .setPosition(20, 180)
+    .setPosition(20, 100)
     .setSize(70, 20);
 
   cp5.addToggle("cp5_playback")
     .setLabel("Playback")
-    .setPosition(100, 180)
+    .setPosition(100, 100)
     .setSize(70, 20);
 
   //framerate debug
@@ -32,38 +35,43 @@ void cp5_init() {
   cp5.addButton("cp5_getStatus")
     .setBroadcast(false)
     .setLabel("get status")
-    .setPosition(20, 280)
+    .setPosition(20, 150)
     .setSize(150, 20)
     .setBroadcast(true);
 
   cp5.addButton("cp5_unlock")
     .setBroadcast(false)
     .setLabel("unlock")
-    .setPosition(20, 310)
+    .setPosition(20, 180)
     .setSize(150, 20)
     .setBroadcast(true);
 
   cp5.addButton("cp5_lock")
     .setBroadcast(false)
     .setLabel("lock")
-    .setPosition(20, 340)
+    .setPosition(20, 210)
     .setSize(150, 20)
     .setBroadcast(true);
 
   // CALIBRATON
   cp5.addTextlabel("calibration")
     .setValueLabel("CALIBRATED")
-    .setPosition(20, 420);  
+    .setPosition(20, 320);  
 
   // nudge
   cp5.addTextlabel("nudge")
-    .setValueLabel("+/- STEP")
-    .setPosition(20, 490);
+    .setValueLabel("MICROSTEP +/-")
+    .setPosition(20, 400);
+
+  // zero
+  cp5.addTextlabel("reset")
+    .setValueLabel("SET '0' POS")
+    .setPosition(20, 470);
 
   // clockwise
   cp5.addTextlabel("length")
     .setValueLabel("LENGTH (CM)")
-    .setPosition(20, 570);
+    .setPosition(20, 540);
 
   for (int i = 0; i < 4; i++) {
 
@@ -71,32 +79,41 @@ void cp5_init() {
     cp5.addToggle("cp5_calibrate"+i)
       .setBroadcast(false)
       .setLabel(str(i))
-      .setPosition(20+(i*40), 440)
-      .setSize(30, 20)
+      .setPosition(20+(i*40), 340)
+      .setSize(30, 30)
       .setBroadcast(true);
 
     // counter-clockwise
     cp5.addBang("cp5_ccw"+i)
       .setBroadcast(false)
       .setLabelVisible(false)
-      .setPosition(20+(i*40), 510)
-      .setSize(30, 20)
+      .setPosition(20+(i*40), 420)
+      .setSize(30, 15)
       .setBroadcast(true);
 
     // clockwise
     cp5.addBang("cp5_cw"+i)
       .setBroadcast(false)
       .setLabelVisible(false)
-      .setPosition(20+(i*40), 532)
-      .setSize(30, 20)
+      .setPosition(20+(i*40), 435)
+      .setSize(30, 15)
+      .setBroadcast(true);
+
+    // set 0 pos
+    cp5.addBang("cp5_zero"+i)
+      .setBroadcast(false)
+      .setLabelVisible(false)
+      .setPosition(20+(i*40), 490)
+      .setSize(30, 30)
       .setBroadcast(true);
 
     // length slider
     cp5.addSlider("cp5_length"+i)
       .setLabel(str(i))
+      .setColorValueLabel(color(0))
       .setLock(true)
       .setRange(0, 2300)
-      .setPosition(20, 590+(i*22))
+      .setPosition(20, 560+(i*22))
       .setSize(150, 20);
   }
 }
@@ -116,7 +133,7 @@ void cp5_record(boolean b) {
   isRecording = b;
 }
 
-void playback(boolean b) {
+void cp5_playback(boolean b) {
   if (isRecording) {
     println("ERROR, you shouldn't playback whilst recording");
   }
@@ -145,43 +162,80 @@ void cp5_dataSelected(File selection) {
 
 //---------------------------------------------
 void cp5_getStatus() {
-  arduino.write("?c\n");
-  arduino.write("?l\n");
+  serial.sendCommand( Serial3D.GET_IS_CALIBRATED );
+  serial.sendCommand( Serial3D.GET_IS_LOCKED );
   //arduino.write("?s\n");
   //arduino.write("?mm\n");
 }
 
 //---------------------------------------------
 void cp5_unlock() {
-  arduino.write("u\n");
+  serial.sendCommand( Serial3D.UNLOCK );
 }
 void cp5_lock() {
-  arduino.write("l\n");
+  serial.sendCommand( Serial3D.LOCK );
 }
 
 //---------------------------------------------
 void cp5_calibrate0(boolean b) {
   if (b) {
-    arduino.write("c0\n");
+    serial.sendCommand( Serial3D.CALIBRATE_A );
   }
 }
 void cp5_calibrate1(boolean b) {
   if (b) {
-    arduino.write("c1\n");
+    serial.sendCommand( Serial3D.CALIBRATE_B );
   }
 }
 void cp5_calibrate2(boolean b) {
   if (b) {
-    arduino.write("c2\n");
+    serial.sendCommand( Serial3D.CALIBRATE_C );
   }
 }
 void cp5_calibrate3(boolean b) {
   if (b) {
-    arduino.write("c3\n");
+    serial.sendCommand( Serial3D.CALIBRATE_D );
   }
 }
 
 //---------------------------------------------
 void cp5_cw0() {
-  println("nudge 0 cw 100 steps");
+  serial.sendCommand( Serial3D.STEP_CW_A );
+}
+void cp5_cw1() {
+  serial.sendCommand( Serial3D.STEP_CW_B );
+}
+void cp5_cw2() {
+  serial.sendCommand( Serial3D.STEP_CW_C );
+}
+void cp5_cw3() {
+  serial.sendCommand( Serial3D.STEP_CW_D );
+}
+
+//---------------------------------------------
+void cp5_ccw0() {
+  serial.sendCommand( Serial3D.STEP_CCW_A );
+}
+void cp5_ccw1() {
+  serial.sendCommand( Serial3D.STEP_CCW_B );
+}
+void cp5_ccw2() {
+  serial.sendCommand( Serial3D.STEP_CCW_C );
+}
+void cp5_ccw3() {
+  serial.sendCommand( Serial3D.STEP_CCW_D );
+}
+
+//---------------------------------------------
+void cp5_zero0() {
+  serial.sendCommand( Serial3D.ZERO_A );
+}
+void cp5_zero1() {
+  serial.sendCommand( Serial3D.ZERO_B );
+}
+void cp5_zero2() {
+  serial.sendCommand( Serial3D.ZERO_C );
+}
+void cp5_zero3() {
+  serial.sendCommand( Serial3D.ZERO_D );
 }

@@ -4,6 +4,8 @@ class Calibrated_AccelStepper : public AccelStepper
 
     Calibrated_AccelStepper(int stepPin, int dirPin, int sensorPin) :
       AccelStepper(AccelStepper::DRIVER, stepPin, dirPin) {
+      _stepPin = stepPin;
+      _dirPin = dirPin;
       _sensorPin = sensorPin;
       _isCalibrated = _isCalibratingIn = _isCalibratingOut = false;
     }
@@ -81,6 +83,18 @@ class Calibrated_AccelStepper : public AccelStepper
       return _isCalibrated;
     }
 
+    void stepCW() {
+      digitalWrite(_dirPin, HIGH);
+      digitalWrite(_stepPin, HIGH);
+      digitalWrite(_stepPin, LOW);
+    }
+
+    void stepCCW() {
+      digitalWrite(_dirPin, LOW);
+      digitalWrite(_stepPin, HIGH);
+      digitalWrite(_stepPin, LOW);
+    }
+
     void moveToMM(float len) {
       float stepsPerRevolution = 400.0f;
       float lengthPerRevolutionMM = 200.0f;
@@ -123,6 +137,8 @@ class Calibrated_AccelStepper : public AccelStepper
     bool  _isCalibrated;
     bool  _isCalibratingIn;
     bool  _isCalibratingOut;
+    int   _stepPin;
+    int   _dirPin;
     int   _sensorPin;
     int   _minPosition = -1;
     int   _maxPosition = -1;

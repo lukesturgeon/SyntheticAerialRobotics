@@ -52,7 +52,7 @@ void loop()
         }
 
         isSystemLocked = true;
-        Serial.println("l=1");
+        Serial.println("systemlock");
         return;
       }
     }
@@ -102,26 +102,29 @@ void serialEvent()
       Serial.println("l=0");
     }
 
-    if ( str.equals("l") ) {
+    else if ( str.equals("l") ) {
       isSystemLocked = true;
       Serial.println("l=1");
     }
 
     // - - - - - - CALIBRATE - - - - - - -
 
-    if ( str.equals("cw") ) {
-      stepper[0].move(1);
+    else if ( str.startsWith("cw") ) {
+      int index = str.substring(2).toInt();
+      stepper[index].stepCW();
     }
 
-    if ( str.equals("ccw") ) {
-      stepper[0].move(-1);
+    else if ( str.startsWith("ccw") ) {
+      int index = str.substring(3).toInt();
+      stepper[index].stepCCW();
     }
 
-    if ( str.equals("z") ) {
-      stepper[0].setCurrentPosition(0);
+    else if ( str.startsWith("z") ) {
+      int index = str.substring(1).toInt();
+      stepper[index].setCurrentPosition(0);
     }
 
-    if ( str.startsWith("c") ) {
+    else if ( str.startsWith("c") ) {
       int index = str.substring(1).toInt();
       isSystemLocked = true;
       stepper[index].initCalibration();
@@ -131,15 +134,15 @@ void serialEvent()
 
     // - - - - - - GET - - - - - - -
 
-    if ( str.equals("?l") ) {
+    else if ( str.equals("?l") ) {
       Serial.print("l=");
       Serial.println(isSystemLocked);
     }
 
-    if ( str.equals("?s") ) {
-      Serial.print("s=");
-      Serial.println(stepper[0].currentPosition());
-    }
+    //    if ( str.equals("?s") ) {
+    //      Serial.print("s=");
+    //      Serial.println(stepper[0].currentPosition());
+    //    }
 
     if ( str.equals("?c") ) {
       String responseStr = "c=";
