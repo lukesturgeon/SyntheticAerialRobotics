@@ -6,20 +6,32 @@ Working repository for control software and Arduino code to choreograph a roboti
 
 ## Arduino ##
 
-##### AccelStepper_test
-A working sketch that allows serial communication to control and calibrate a single motor driver.
+#### AccelStepper_x4
+A working sketch that allows serial communication to control and calibrate four stepper motors simultaniously.
 
-##### AccelStepper_x2
-A working sketch that allows serial communication to control and calibrate two stepper motors simultaniously.
+##### Commands
+- s = sleep
+- w = wake
+- u = unlock
+- l = lock
+
+- ccw0 = 1 step counterclockwise for motor 0
+- cw2 = 1 step clockwise for motor 2
+- z1 = set current position to zero for motor 1
+- c3 = start calibration process for motor 3
+
+- ?l = get locked status
+- ?s = get sleep status
+- ?c = get calibration status (all four motors)
 
 ---
 
 ## Processing ##
 
-##### single_stepper_controller
+#### single_stepper_controller
 A working sketch that includes all basic interface elements necessary to interact with a single motor.
 
-##### SyntheticAerialRoboticsInterface
+#### SyntheticAerialRoboticsInterface
 A working sketch to visualise and measure the position of the actor in 3D space. Using real-world measurements in CM to construct the box, all values afterwards will work at that scale.
 
 ---

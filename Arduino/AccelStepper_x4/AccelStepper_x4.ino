@@ -2,17 +2,26 @@
 #include "Calibrated_AccelStepper.h"
 
 boolean isSystemLocked = true;
-const int numMotors = 3;
+boolean isSleeping = false;
+const int numMotors = 4;
+const int sleepPin = A0;
 
+// step,  dir,    sensor
+// green, yellow, red
 Calibrated_AccelStepper stepper[numMotors] {
   Calibrated_AccelStepper(3, 2, 4),
   Calibrated_AccelStepper(6, 5, 7),
-  Calibrated_AccelStepper(9, 8, 10)
+  Calibrated_AccelStepper(9, 8, 10),
+  Calibrated_AccelStepper(12, 11, 13)
 };
 
 
 void setup()
 {
+  // wake the arduino by default
+  pinMode(sleepPin, OUTPUT);
+  digitalWrite(sleepPin, HIGH);
+
   // initialise the motors
   for (int i = 0; i < numMotors; i++)
   {
@@ -26,7 +35,7 @@ void setup()
 }
 
 void loop()
-{
+{  
   for (int i = 0; i < numMotors; i++)
   {
     if ( stepper[i].isCalibrating() )
@@ -34,7 +43,7 @@ void loop()
       stepper[i].runCalibration();
     }
 
-    if (!isSystemLocked)
+    else if (!isSystemLocked)
     {
       if ( !stepper[i].isSensorBlocked() )
       {
@@ -52,7 +61,7 @@ void loop()
         }
 
         isSystemLocked = true;
-        Serial.println("systemlock");
+        Serial.println("l=1");
         return;
       }
     }
@@ -95,9 +104,25 @@ void serialEvent()
       stepper[0].moveTo(step);
     }*/
 
+    // - - - - - - SLEEP - - - - - - -
+
+    if ( str.equals("s") ) {
+      digitalWrite(sleepPin, LOW);
+      isSleeping = true;
+      isSystemLocked = true;
+      Serial.println("s=1");
+    }
+
+    else if ( str.equals("w") ) {
+      digitalWrite(sleepPin, HIGH);
+      isSleeping = false;
+      isSystemLocked = false;
+      Serial.println("s=0");
+    }
+
     // - - - - - - LOCK - - - - - - -
 
-    if ( str.equals("u") ) {
+    else if ( str.equals("u") ) {
       isSystemLocked = false;
       Serial.println("l=0");
     }
@@ -109,14 +134,14 @@ void serialEvent()
 
     // - - - - - - CALIBRATE - - - - - - -
 
-    else if ( str.startsWith("cw") ) {
-      int index = str.substring(2).toInt();
-      stepper[index].stepCW();
-    }
-
     else if ( str.startsWith("ccw") ) {
       int index = str.substring(3).toInt();
       stepper[index].stepCCW();
+    }
+
+    else if ( str.startsWith("cw") ) {
+      int index = str.substring(2).toInt();
+      stepper[index].stepCW();
     }
 
     else if ( str.startsWith("z") ) {
@@ -139,10 +164,10 @@ void serialEvent()
       Serial.println(isSystemLocked);
     }
 
-    //    if ( str.equals("?s") ) {
-    //      Serial.print("s=");
-    //      Serial.println(stepper[0].currentPosition());
-    //    }
+    if ( str.equals("?s") ) {
+      Serial.print("s=");
+      Serial.println(isSleeping);
+    }
 
     if ( str.equals("?c") ) {
       String responseStr = "c=";
