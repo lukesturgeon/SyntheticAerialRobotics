@@ -3,6 +3,7 @@ void cp5_init() {
   cp5.setColorBackground( color(80) );
   cp5.setColorForeground( color(255) );
   cp5.setColorActive( color(200) );
+  //cp5.setAutoDraw(false);
 
   cp5.addSlider("easing")
     .setRange(0.001, 0.5)
@@ -55,7 +56,7 @@ void cp5_init() {
 
   // CALIBRATON
   cp5.addTextlabel("calibration")
-    .setValueLabel("CALIBRATED")
+    .setValueLabel("CALIBRATE")
     .setPosition(20, 320);  
 
   // nudge
@@ -73,12 +74,14 @@ void cp5_init() {
     .setValueLabel("LENGTH (CM)")
     .setPosition(20, 540);
 
-  for (int i = 0; i < 4; i++) {
+  String[] labels = {"A", "B", "C", "D"};
+
+  for (int i = 0; i < NUM_MOTORS; i++) {
 
     // calibration
-    cp5.addToggle("cp5_calibrate"+i)
+    cp5.addBang("cp5_calibrate"+i)
       .setBroadcast(false)
-      .setLabel(str(i))
+      .setLabel(labels[i])
       .setPosition(20+(i*40), 340)
       .setSize(30, 30)
       .setBroadcast(true);
@@ -177,25 +180,17 @@ void cp5_lock() {
 }
 
 //---------------------------------------------
-void cp5_calibrate0(boolean b) {
-  if (b) {
-    serial.sendCommand( Serial3D.CALIBRATE_A );
-  }
+void cp5_calibrate0() {
+  serial.sendCommand( Serial3D.CALIBRATE_A );
 }
-void cp5_calibrate1(boolean b) {
-  if (b) {
-    serial.sendCommand( Serial3D.CALIBRATE_B );
-  }
+void cp5_calibrate1() {
+  serial.sendCommand( Serial3D.CALIBRATE_B );
 }
-void cp5_calibrate2(boolean b) {
-  if (b) {
-    serial.sendCommand( Serial3D.CALIBRATE_C );
-  }
+void cp5_calibrate2() {
+  serial.sendCommand( Serial3D.CALIBRATE_C );
 }
-void cp5_calibrate3(boolean b) {
-  if (b) {
-    serial.sendCommand( Serial3D.CALIBRATE_D );
-  }
+void cp5_calibrate3() {
+  serial.sendCommand( Serial3D.CALIBRATE_D );
 }
 
 //---------------------------------------------

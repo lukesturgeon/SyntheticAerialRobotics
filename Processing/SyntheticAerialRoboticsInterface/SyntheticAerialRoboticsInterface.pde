@@ -9,8 +9,9 @@ float     scaleCM = -1200.0; // default size to scale down to
 float     worldRotationX = 0.0;
 float     worldRotationY = 0.0;
 
-Motor3D[] motorPositions;
+Motor3D[] motor;
 PVector   actorTarget;
+PVector   actorTarget2D;
 PVector   actorPosition;
 float     easing = 0.1;
 
@@ -21,16 +22,17 @@ boolean   isPlaying;
 int       playbackPosition;
 
 ControlP5 cp5;
-String warnMessage = "";
-boolean isSystemLocked = true;
+WarningSystem warning;
 
 Serial3D serial;
 
 void setup() {
-  size(1280, 800, P3D);
+  size(1400, 800, P3D);
   smooth(8);
 
   cp5_init();
+
+  warning = new WarningSystem();
 
   isRecording = false;
   recordData = new Table();
@@ -38,22 +40,24 @@ void setup() {
   recordData.addColumn("y");
   recordData.addColumn("z");
 
-  motorPositions = new Motor3D[4];
-  motorPositions[0] = new Motor3D(-WIDTH_CM/2, -HEIGHT_CM/2, -DEPTH_CM/2);
-  motorPositions[1] = new Motor3D(WIDTH_CM/2, -HEIGHT_CM/2, -DEPTH_CM/2);
-  motorPositions[2] = new Motor3D(WIDTH_CM/2, -HEIGHT_CM/2, DEPTH_CM/2);
-  motorPositions[3] = new Motor3D(-WIDTH_CM/2, -HEIGHT_CM/2, DEPTH_CM/2);
+  motor = new Motor3D[4];
+  motor[0] = new Motor3D(-WIDTH_CM/2, -HEIGHT_CM/2, -DEPTH_CM/2);
+  motor[0].setLabel("MOTOR A");
+  motor[1] = new Motor3D(WIDTH_CM/2, -HEIGHT_CM/2, -DEPTH_CM/2);
+  motor[1].setLabel("MOTOR B");
+  motor[2] = new Motor3D(WIDTH_CM/2, -HEIGHT_CM/2, DEPTH_CM/2);
+  motor[2].setLabel("MOTOR C");
+  motor[3] = new Motor3D(-WIDTH_CM/2, -HEIGHT_CM/2, DEPTH_CM/2);
+  motor[3].setLabel("MOTOR D");
 
   // start in center of floor
   actorTarget  = new PVector(0, HEIGHT_CM/2, 0);
+  actorTarget2D = new PVector();
   actorPosition = actorTarget.get();
 
   // connect to arduino
   serial = new Serial3D();
-  if (!serial.connect(this, "/dev/tty.usbmodem411", 115200)) {
-    showWarning("The Arduino was not detected! Connect Arduino USB cable and restart software.");
-  }
-  
+  warning.arduinoConnected = serial.connect(this, "/dev/tty.usbmodem411", 115200);
 }
 
 void update() {
@@ -67,9 +71,9 @@ void update() {
   actorPosition.z += dz * easing;
 
   for (int i = 0; i < NUM_MOTORS; i++) {
-    motorPositions[i].calculateLengthTo( actorPosition );
+    motor[i].calculateLengthTo( actorPosition );
     Slider s = (Slider) cp5.getController("cp5_length"+i);
-    s.setValue(motorPositions[i].getLength());
+    s.setValue(motor[i].getLengthCM());
   }
 
   // are we recording
@@ -101,19 +105,21 @@ void update() {
 
 void draw() {
 
-  // run program as normal
+  // run position maths
   update();
 
-  background(0, 0, 0);
+  // redraw interface
+  background(0, 0, 0);  
 
   pushMatrix();
   translate(width/2, (height/2), scaleCM);
   rotateX(worldRotationX);
   rotateY(worldRotationY);
 
+
   //draw frame
   noFill();
-  stroke(#444444);
+  stroke(#5E6E8E);
   box(WIDTH_CM, HEIGHT_CM, DEPTH_CM);
 
   // draw floor
@@ -127,25 +133,28 @@ void draw() {
   // draw cables
   stroke(255);
   for (int i = 0; i < 4; i++) {
-    line(motorPositions[i].x, motorPositions[i].y, motorPositions[i].z, 
+    line(motor[i].x, motor[i].y, motor[i].z, 
       actorPosition.x, actorPosition.y, actorPosition.z);
   }
   noStroke();
 
   // draw actorTarget
-  pushMatrix();
-  fill(100);
-  translate(actorTarget.x, actorTarget.y, actorTarget.z);
-  sphere(20);
-  popMatrix();
+  actorTarget2D.set(
+    screenX(actorTarget.x, actorTarget.y, actorTarget.z), 
+    screenY(actorTarget.x, actorTarget.y, actorTarget.z));
+  /*pushMatrix();
+   fill(100);
+   translate(actorTarget.x, actorTarget.y, actorTarget.z);
+   sphere(20);
+   popMatrix();*/
 
-  stroke(50, 50, 0);
-  line(  actorTarget.x, actorTarget.y, -DEPTH_CM/2, 
-    actorTarget.x, actorTarget.y, DEPTH_CM/2  );
-  line(  -WIDTH_CM/2, actorTarget.y, actorTarget.z, 
-    WIDTH_CM/2, actorTarget.y, actorTarget.z  );
-  line(  actorTarget.x, -HEIGHT_CM/2, actorTarget.z, 
-    actorTarget.x, HEIGHT_CM/2, actorTarget.z  );
+  /*stroke(50, 50, 0);
+   line(  actorTarget.x, actorTarget.y, -DEPTH_CM/2, 
+   actorTarget.x, actorTarget.y, DEPTH_CM/2  );
+   line(  -WIDTH_CM/2, actorTarget.y, actorTarget.z, 
+   WIDTH_CM/2, actorTarget.y, actorTarget.z  );
+   line(  actorTarget.x, -HEIGHT_CM/2, actorTarget.z, 
+   actorTarget.x, HEIGHT_CM/2, actorTarget.z  );*/
 
   noStroke();
 
@@ -161,7 +170,8 @@ void draw() {
     pushMatrix();
     pushStyle();
     fill(255);
-    translate(motorPositions[i].x, motorPositions[i].y, motorPositions[i].z);
+    motor[i].calculate2d();
+    translate(motor[i].x, motor[i].y, motor[i].z);
     sphere(10);
     popStyle();
     popMatrix();
@@ -179,29 +189,22 @@ void draw() {
   //== end world translate and zoom ==//
   popMatrix();
 
-  if ( !warnMessage.equals("") ) {
-    // there's an error
-    //pushStyle();
-    fill(255, 255, 0);
-    rect(200, 300, width-400, height-600);
-    fill(0);
-    //textSize(20);
-    textAlign(CENTER, CENTER);
-    text(warnMessage, width/2, height/2);
-    //popStyle();
+  pushStyle();
+  noFill();
+  strokeWeight(3);
+  stroke(255);
+  ellipse(actorTarget2D.x, actorTarget2D.y, 30, 30);
+  popStyle();
+
+  for (int i = 0; i < NUM_MOTORS; i++) {
+    motor[i].draw2d();
   }
-}
 
-void showWarning(String e) {
-  warnMessage = e;
-}
-
-void clearWarning() {
-  warnMessage = "";
+  warning.draw();
 }
 
 void mouseDragged() {
-  if (keyPressed && key == 'w') {
+  if (keyPressed && key == ' ') {
     // add x/y to the rotation
     worldRotationX -= (mouseY-pmouseY) * 0.01;
     worldRotationY += (mouseX-pmouseX) * 0.01;
@@ -286,51 +289,22 @@ void serialEvent(Serial p) {
   String message = p.readString();
   message = trim(message);
 
-  /*if ( message.substring(0, 3).equals("mm=") ) 
-   {
-   String mm = message.substring(3);
-   currentLength = int( mm );
-   } else if ( message.substring(0, 2).equals("s=") ) 
-   {
-   String s = message.substring(2);
-   currentStep = int( s );
-   cp5.getController("currentStep").setValue(currentStep);
-   } else if ( message.substring(0, 2).equals("c=") ) 
-   {
-   String c = message.substring(2);
-   println("calibration = " + c);
-   
-   
-   } else if ( message.substring(0, 2).equals("l=") ) 
-   {
-   String l = message.substring(2);
-   isSystemLocked = l.equals("1") ? true : false;
-   Toggle t = (Toggle) cp5.getController("lockToggle");
-   t.setBroadcast(false);
-   t.setValue(isSystemLocked);
-   t.setBroadcast(true);
-   } else
-   {
-   println("> "+message);
-   }*/
-
+  // check for locked message
   if ( message.substring(0, 2).equals("l=") ) 
   {
     String l = message.substring(2);
-    isSystemLocked = l.equals("1") ? true : false;    
-    if (isSystemLocked) {
-      showWarning("Arduino is locked. A cable is too close!");
-    } else {
-      clearWarning();
-    }
-  } else if ( message.substring(0, 2).equals("c=") ) {    
+    warning.isSystemLocked = l.equals("1") ? true : false;
+  } 
+
+  // check for calibration
+  else if ( message.substring(0, 2).equals("c=") ) {    
     String[] list = split(message.substring(2), ',');
     for (int i = 0; i < list.length; i++) {
       // mark as calibrated
-      Toggle t = (Toggle) cp5.getController("cp5_calibrate"+i);
-      t.setBroadcast(false);
-      t.setValue( list[i].equals("1") ? true : false );
-      t.setBroadcast(true);
+      warning.motorAReady = list[0].equals("1") ? true : false;
+      warning.motorBReady = list[1].equals("1") ? true : false;
+      warning.motorCReady = list[2].equals("1") ? true : false;
+      warning.motorDReady = list[3].equals("1") ? true : false;
     }
   }
   // just output the unknown reponse

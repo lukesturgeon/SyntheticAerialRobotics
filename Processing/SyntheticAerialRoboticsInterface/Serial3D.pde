@@ -3,6 +3,9 @@ import processing.serial.*;
 class Serial3D {
 
   // LOCK SYSTEM
+  static final String SLEEP             = "s\n";
+  static final String WAKE              = "w\n";
+  static final String GET_IS_SLEEP       = "?s\n"; // will return "s=0 / s=1"
   static final String UNLOCK            = "u\n";
   static final String LOCK              = "l\n";
   static final String GET_IS_LOCKED     = "?l\n"; // will return "l=0 / l=1"
@@ -45,8 +48,7 @@ class Serial3D {
         break;
       }
     }
-
-
+    
     return portDetected;
   }
 
