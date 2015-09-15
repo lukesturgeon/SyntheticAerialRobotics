@@ -1,60 +1,68 @@
 class WarningSystem {
 
-  String  _value;
+  String  _warningMessage;
 
   boolean arduinoConnected = false;
-  boolean motorAReady = false;
-  boolean motorBReady = false;
-  boolean motorCReady = false;
-  boolean motorDReady = false;
-  boolean isSystemLocked = true;
+  boolean motorAReady = true;
+  boolean motorBReady = true;
+  boolean motorCReady = true;
+  boolean motorDReady = true;
+  boolean isLocked = false;
+  boolean isSleeping = false;
   boolean isSendingData = false;
 
   WarningSystem() {
-    _value = "";
+    _warningMessage = "";
   }
 
   void draw() {
 
-    boolean hasError = false;
+    boolean showWarning = false;
 
     if (!arduinoConnected) {
-      _value = "The Arduino has not been detected.";
-      hasError = true;
+      _warningMessage = "The Arduino has not been detected.";
+      showWarning = true;
     } else if (!motorAReady) {
-      _value = "Motor A must be calibrated";
-      hasError = true;
+      _warningMessage = "Motor A must be calibrated";
+      showWarning = true;
     } else if (!motorBReady) {
-      _value = "Motor B must be calibrated";
-      hasError = true;
+      _warningMessage = "Motor B must be calibrated";
+      showWarning = true;
     } else if (!motorCReady) {
-      _value = "Motor C must be calibrated";
-      hasError = true;
+      _warningMessage = "Motor C must be calibrated";
+      showWarning = true;
     } else if (!motorDReady) {
-      _value = "Motor D must be calibrated";
-      hasError = true;
-    } else if (isSystemLocked) {
-      _value = "The System is locked!";
-      hasError = true;
+      _warningMessage = "Motor D must be calibrated";
+      showWarning = true;
+    } else if (isLocked) {
+      _warningMessage = "The system is locked!";
+      showWarning = true;
+    } else if (isSleeping) {
+      _warningMessage = "The system is sleeping";
+      showWarning = true;
     } else if (!isSendingData) {
-      _value = "No data is being sent";
-      hasError = true;
-    }
+      _warningMessage = "No data is being sent";
+      showWarning = true;
+    } 
 
     // draw the error
-    if (hasError) {
+    if (showWarning) {
+      pushMatrix();
+      translate(width/2, height-60);
       pushStyle();
 
       noStroke();
       fill(255, 255, 0);
-      float w = _value.length() * 9;
-      rect(mouseX-(w/2), mouseY-24, w, 32);
+      float w = _warningMessage.length() * 13;
+      rect(-(w/2), -20, w, 40);
 
       fill(0);
-      textSize(16);
-      textAlign(CENTER, BOTTOM);
-      text(_value, mouseX, mouseY);
+      textAlign(CENTER, CENTER);
+      textFont(headingFont, 24);
+      text(_warningMessage, 0, 0);
+
       popStyle();
+      popMatrix();
     }
   }
 }
