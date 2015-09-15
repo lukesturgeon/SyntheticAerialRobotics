@@ -10,26 +10,21 @@ Working repository for control software and Arduino code to choreograph a roboti
 A working sketch that allows serial communication to control and calibrate four stepper motors simultaniously.
 
 ##### Commands
-
-- 1,2,3,4 = four ints to move each motor to the new length in MM
-
-- s 	= sleep
-- w 	= wake
-- u 	= unlock
-- l 	= lock
-
-- ccw0 	= 1 step counterclockwise for motor 0
-- cw2 	= 1 step clockwise for motor 2
-- z1 	= set current position to zero for motor 1
-- c3 	= start calibration process for motor 3
-
-- ms 	= set max speed
-- ma 	= set max acceleration
-
-- ?l 	= get locked status
-- ?s 	= get sleep status
-- ?c 	= get calibration status (all four motors)
-- ?mm 	= get length in MM (all four motors)
+- 1,2,3,4 : four ints to move each motor to the new length in MM
+- s : sleep
+- w : wake
+- u : unlock
+- l : lock
+- ccw0 : 1 step counterclockwise for motor 0
+- cw2 : 1 step clockwise for motor 2
+- z1 : set current position to zero for motor 1
+- c3 : start calibration process for motor 3
+- ms : set max speed
+- ma : set max acceleration
+- ?l : get locked status
+- ?s : get sleep status
+- ?c : et calibration status (all four motors)
+- ?mm : get length in MM (all four motors)
 
 ---
 
@@ -54,3 +49,4 @@ The specifications for the components used for this particular installation. Ste
 - quadstepper.fzz : The circuit diagram and components created in Fritzing.
 - powersupply.pdf : The power supply used for the installation 12V 5A
 - motor-unit.ai : The illustrator file used to fabricate the acrylic sheets to assemble the four motor units. This file is to scale but some measurements are imprecise. File reflects the changes made manually to the current working acrylic sheets.
+- installation-setup.ai : floorplan and dimensions for public installation at Laboratory Residency in Spokane, US.
