@@ -35,7 +35,7 @@ void setup()
 }
 
 void loop()
-{  
+{
   for (int i = 0; i < numMotors; i++)
   {
     if ( stepper[i].isCalibrating() )
@@ -77,31 +77,38 @@ void serialEvent()
 
     // - - - - - - MOVE - - - - - - -
 
+    if ( str.indexOf(',') > 0 ) {
+      // assume its for numbers
+      if (isSystemLocked) {
+        Serial.println("l=1");
+      }
+      else if (isSleeping) {
+        isSleeping = false;
+        Serial.println("s=0");
+      }
+      else {
+        //extract all values
+        int a = atoi( strtok(buffer, ",") );
+        int b = atoi( strtok(0, ",") );
+        int c = atoi( strtok(0, ",") );
+        int d = atoi( strtok(0, ",") );
+
+        // update targets
+        //      stepper[0].moveTo( mmToSteps(a) );
+        //      stepper[1].moveTo( mmToSteps(b) );
+        //      stepper[2].moveTo( mmToSteps(c) );
+        //      stepper[3].moveTo( mmToSteps(d) );
+
+        Serial.print("a goes to : ");
+        Serial.println(a);
+      }
+    }
+
     // move x mm
-    /*if ( str.startsWith("m1") && !isSystemLocked ) {
-      float len = str.substring(1).toInt();
-      stepper[0].moveToMM(len);
-    }
+    // systems should automatically wake from sleep just in case
+    /*if (!isSystemLocked) {
+      // do stuff
 
-    if ( str.startsWith("m2") && !isSystemLocked ) {
-      float len = str.substring(1).toInt();
-      stepper[1].moveToMM(len);
-    }
-
-    if ( str.startsWith("m3") && !isSystemLocked ) {
-      float len = str.substring(1).toInt();
-      stepper[2].moveToMM(len);
-    }
-
-    if ( str.startsWith("m4") && !isSystemLocked ) {
-      float len = str.substring(1).toInt();
-      stepper[3].moveToMM(len);
-    }
-
-    //move x steps
-    if ( str.startsWith("s") && !isSystemLocked ) {
-      int step = str.substring(1).toInt();
-      stepper[0].moveTo(step);
     }*/
 
     // - - - - - - SLEEP - - - - - - -
@@ -109,14 +116,12 @@ void serialEvent()
     if ( str.equals("s") ) {
       digitalWrite(sleepPin, LOW);
       isSleeping = true;
-      isSystemLocked = true;
       Serial.println("s=1");
     }
 
     else if ( str.equals("w") ) {
       digitalWrite(sleepPin, HIGH);
       isSleeping = false;
-      isSystemLocked = false;
       Serial.println("s=0");
     }
 
@@ -136,12 +141,14 @@ void serialEvent()
 
     else if ( str.startsWith("ccw") ) {
       int index = str.substring(3).toInt();
-      stepper[index].stepCCW();
+      //stepper[index].stepCCW();
+      stepper[index].move(-100);
     }
 
     else if ( str.startsWith("cw") ) {
       int index = str.substring(2).toInt();
-      stepper[index].stepCW();
+      //stepper[index].stepCW();
+      stepper[index].move(100);
     }
 
     else if ( str.startsWith("z") ) {
@@ -157,6 +164,20 @@ void serialEvent()
       Serial.println("l=1");
     }
 
+    else if ( str.startsWith("ms") ) {
+      int newSpeed = str.substring(2).toInt();
+      for (int i = 0; i < numMotors; i++) {
+        stepper[i].setMaxSpeed( newSpeed );
+      }
+    }
+
+    else if ( str.startsWith("ma") ) {
+      int newAcceleration = str.substring(2).toInt();
+      for (int i = 0; i < numMotors; i++) {
+        stepper[i].setAcceleration( newAcceleration );
+      }
+    }
+
     // - - - - - - GET - - - - - - -
 
     else if ( str.equals("?l") ) {
@@ -164,13 +185,25 @@ void serialEvent()
       Serial.println(isSystemLocked);
     }
 
-    if ( str.equals("?s") ) {
+    else if ( str.equals("?s") ) {
       Serial.print("s=");
       Serial.println(isSleeping);
     }
 
-    if ( str.equals("?c") ) {
+    else if ( str.equals("?c") ) {
       String responseStr = "c=";
+      for (int i = 0; i < numMotors; i++)
+      {
+        responseStr += stepper[i].isCalibrated();
+        if (i < numMotors - 1) {
+          responseStr += ",";
+        }
+      }
+      Serial.println(responseStr);
+    }
+
+    else if ( str.equals("?mm") ) {
+      String responseStr = "mm=";
       for (int i = 0; i < numMotors; i++)
       {
         responseStr += stepper[i].isCalibrated();

@@ -10,19 +10,26 @@ Working repository for control software and Arduino code to choreograph a roboti
 A working sketch that allows serial communication to control and calibrate four stepper motors simultaniously.
 
 ##### Commands
-- s = sleep
-- w = wake
-- u = unlock
-- l = lock
 
-- ccw0 = 1 step counterclockwise for motor 0
-- cw2 = 1 step clockwise for motor 2
-- z1 = set current position to zero for motor 1
-- c3 = start calibration process for motor 3
+- 1,2,3,4 = four ints to move each motor to the new length in MM
 
-- ?l = get locked status
-- ?s = get sleep status
-- ?c = get calibration status (all four motors)
+- s 	= sleep
+- w 	= wake
+- u 	= unlock
+- l 	= lock
+
+- ccw0 	= 1 step counterclockwise for motor 0
+- cw2 	= 1 step clockwise for motor 2
+- z1 	= set current position to zero for motor 1
+- c3 	= start calibration process for motor 3
+
+- ms 	= set max speed
+- ma 	= set max acceleration
+
+- ?l 	= get locked status
+- ?s 	= get sleep status
+- ?c 	= get calibration status (all four motors)
+- ?mm 	= get length in MM (all four motors)
 
 ---
 
