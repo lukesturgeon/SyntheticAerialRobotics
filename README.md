@@ -38,14 +38,8 @@ A working sketch to visualise and measure the position of the actor in 3D space.
 
 ---
 
-## Datasheets ##
-
-The specifications for the components used for this particular installation. Stepper motors and A4988 Polulo stepper driver.
-
----
-
-## Design Files ##
-
+## Resources ##
+- Datasheets for variable electronic components
 - quadstepper.fzz : The circuit diagram and components created in Fritzing.
 - powersupply.pdf : The power supply used for the installation 12V 5A
 - motor-unit.ai : The illustrator file used to fabricate the acrylic sheets to assemble the four motor units. This file is to scale but some measurements are imprecise. File reflects the changes made manually to the current working acrylic sheets.
