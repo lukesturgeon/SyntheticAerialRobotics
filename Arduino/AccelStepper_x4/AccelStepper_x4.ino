@@ -2,7 +2,6 @@
 #include "Calibrated_AccelStepper.h"
 
 boolean isSystemLocked = true;
-boolean isSleeping = false;
 const int numMotors = 4;
 const int sleepPin = A0;
 
@@ -25,8 +24,8 @@ void setup()
   // initialise the motors
   for (int i = 0; i < numMotors; i++)
   {
-    stepper[i].setMinPosition(0);
-    stepper[i].setMaxPosition(3600);
+    stepper[i].setMinSteps(0);
+    stepper[i].setMaxSteps(3600);
     stepper[i].setMaxSpeed(1000.0);
     stepper[i].setAcceleration(500.0);
   }
@@ -41,6 +40,10 @@ void loop()
     if ( stepper[i].isCalibrating() )
     {
       stepper[i].runCalibration();
+    }
+
+    else if ( stepper[i].isFreeStepping() ) {
+      stepper[i].runFreeStep();
     }
 
     else if (!isSystemLocked)
@@ -68,6 +71,16 @@ void loop()
   }
 }
 
+boolean isSleeping() {
+  return (digitalRead(sleepPin) == LOW);
+}
+
+void wake() {
+  digitalWrite(sleepPin, HIGH);
+  Serial.println("s=0");
+  delay(2); // allow a 2ms delay for the system to stabalize
+}
+
 void serialEvent()
 {
   static char buffer[80];
@@ -82,16 +95,17 @@ void serialEvent()
       if (isSystemLocked) {
         Serial.println("l=1");
       }
-      else if (isSleeping) {
-        isSleeping = false;
-        Serial.println("s=0");
-      }
       else {
+        // we have received a command, so lets wake the system up
+        if (isSleeping()) {
+          wake();
+        }
+
         //extract all values
-        int a = atoi( strtok(buffer, ",") );
-        int b = atoi( strtok(0, ",") );
-        int c = atoi( strtok(0, ",") );
-        int d = atoi( strtok(0, ",") );
+        long a = atol( strtok(buffer, ",") );
+        long b = atol( strtok(0, ",") );
+        long c = atol( strtok(0, ",") );
+        long d = atol( strtok(0, ",") );
 
         // update targets
         //      stepper[0].moveTo( mmToSteps(a) );
@@ -104,65 +118,37 @@ void serialEvent()
       }
     }
 
-    // move x mm
-    // systems should automatically wake from sleep just in case
-    /*if (!isSystemLocked) {
-      // do stuff
-
-    }*/
-
-    // - - - - - - SLEEP - - - - - - -
-
-    if ( str.equals("s") ) {
-      digitalWrite(sleepPin, LOW);
-      isSleeping = true;
-      Serial.println("s=1");
-    }
-
-    else if ( str.equals("w") ) {
-      digitalWrite(sleepPin, HIGH);
-      isSleeping = false;
-      Serial.println("s=0");
-    }
-
-    // - - - - - - LOCK - - - - - - -
-
-    else if ( str.equals("u") ) {
-      isSystemLocked = false;
-      Serial.println("l=0");
-    }
-
-    else if ( str.equals("l") ) {
-      isSystemLocked = true;
-      Serial.println("l=1");
-    }
-
-    // - - - - - - CALIBRATE - - - - - - -
-
     else if ( str.startsWith("ccw") ) {
+      if (isSleeping()) {
+        // wake the system up
+        wake();
+      }
       int index = str.substring(3).toInt();
-      //stepper[index].stepCCW();
-      stepper[index].move(-100);
+      stepper[index].freeStep(-100);
     }
 
     else if ( str.startsWith("cw") ) {
+      if (isSleeping()) {
+        // wake the system up
+        wake();
+      }
       int index = str.substring(2).toInt();
-      //stepper[index].stepCW();
-      stepper[index].move(100);
-    }
-
-    else if ( str.startsWith("z") ) {
-      int index = str.substring(1).toInt();
-      stepper[index].setCurrentPosition(0);
+      stepper[index].freeStep(100);
     }
 
     else if ( str.startsWith("c") ) {
+      if (isSleeping()) {
+        // wake the system up
+        wake();
+      }
       int index = str.substring(1).toInt();
       isSystemLocked = true;
       stepper[index].initCalibration();
       // send lock status
       Serial.println("l=1");
     }
+
+    // - - - - - - CONFIG - - - - - - -
 
     else if ( str.startsWith("ms") ) {
       int newSpeed = str.substring(2).toInt();
@@ -178,6 +164,35 @@ void serialEvent()
       }
     }
 
+    // - - - - - - SLEEP - - - - - - -
+
+    else if ( str.equals("s") ) {
+      digitalWrite(sleepPin, LOW);
+      Serial.println("s=1");
+    }
+
+    else if ( str.equals("w") ) {
+      digitalWrite(sleepPin, HIGH);
+      Serial.println("s=0");
+    }
+
+    // - - - - - - LOCK - - - - - - -
+
+    else if ( str.equals("u") ) {
+      isSystemLocked = false;
+      Serial.println("l=0");
+    }
+
+    else if ( str.equals("l") ) {
+      isSystemLocked = true;
+      Serial.println("l=1");
+    }
+
+    else if ( str.startsWith("z") ) {
+      int index = str.substring(1).toInt();
+      stepper[index].setCurrentPosition(0);
+    }
+
     // - - - - - - GET - - - - - - -
 
     else if ( str.equals("?l") ) {
@@ -187,7 +202,8 @@ void serialEvent()
 
     else if ( str.equals("?s") ) {
       Serial.print("s=");
-      Serial.println(isSleeping);
+      Serial.println(isSleeping());
+      //Serial.println( digitalRead(sleepPin) );
     }
 
     else if ( str.equals("?c") ) {
@@ -206,7 +222,7 @@ void serialEvent()
       String responseStr = "mm=";
       for (int i = 0; i < numMotors; i++)
       {
-        responseStr += stepper[i].isCalibrated();
+        responseStr += stepper[i].currentPosition();
         if (i < numMotors - 1) {
           responseStr += ",";
         }

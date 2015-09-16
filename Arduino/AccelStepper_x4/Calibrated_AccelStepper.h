@@ -8,6 +8,7 @@ class Calibrated_AccelStepper : public AccelStepper
       _dirPin = dirPin;
       _sensorPin = sensorPin;
       _isCalibrated = _isCalibratingIn = _isCalibratingOut = false;
+      _isFreeStepping = false;
     }
 
     /**
@@ -83,6 +84,23 @@ class Calibrated_AccelStepper : public AccelStepper
       return _isCalibrated;
     }
 
+    bool isFreeStepping() {
+      return _isFreeStepping;
+    }
+
+    void freeStep(int steps) {
+      _isFreeStepping = true;
+      move(steps);
+    }
+
+    void runFreeStep() {
+      if (distanceToGo() == 0) {
+        _isFreeStepping = false;
+      } else {
+        run();
+      }
+    }
+
     void stepCW() {
       digitalWrite(_dirPin, HIGH);
       digitalWrite(_stepPin, HIGH);
@@ -101,15 +119,15 @@ class Calibrated_AccelStepper : public AccelStepper
       int numSteps = int( (stepsPerRevolution / lengthPerRevolutionMM) * len );
 
       // constrain
-      if (_minPosition != -1 && numSteps < _minPosition)
+      if (_minSteps != -1 && numSteps < _minSteps)
       {
         // limit the target
-        moveTo(_minPosition);
+        moveTo(_minSteps);
       }
-      else if (_maxPosition != -1 && numSteps > _maxPosition)
+      else if (_maxSteps != -1 && numSteps > _maxSteps)
       {
         // limit the target
-        moveTo(_maxPosition);
+        moveTo(_maxSteps);
       }
       else
       {
@@ -122,24 +140,25 @@ class Calibrated_AccelStepper : public AccelStepper
     /**
      * Set the minimum position in steps that motor can move to
      */
-    void setMinPosition(int p) {
-      _minPosition = p;
+    void setMinSteps(int p) {
+      _minSteps = p;
     }
 
     /**
      * Set the maximum position in steps that motor can move to
      */
-    void setMaxPosition(int p) {
-      _maxPosition = p;
+    void setMaxSteps(int p) {
+      _maxSteps = p;
     }
 
   private:
     bool  _isCalibrated;
     bool  _isCalibratingIn;
     bool  _isCalibratingOut;
+    bool  _isFreeStepping;
     int   _stepPin;
     int   _dirPin;
     int   _sensorPin;
-    int   _minPosition = -1;
-    int   _maxPosition = -1;
+    int   _minSteps = -1;
+    int   _maxSteps = -1;
 };
