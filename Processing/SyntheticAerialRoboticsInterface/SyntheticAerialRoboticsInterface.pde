@@ -1,21 +1,22 @@
 import controlP5.*; //<>//
 
-final float         WIDTH_CM = 1500; // left to right (in cm)
-final float         DEPTH_CM = 1500; // front to back (in cm)
-final float         HEIGHT_CM = 800; // top to bottom (in cm)
+final float         WIDTH_CM = 301.00; // left to right (in cm)
+final float         DEPTH_CM = 290.52; // front to back (in cm)
+final float         HEIGHT_CM = 279.40; // top to bottom (in cm)
 final int           NUM_MOTORS = 4; // controls the loops and settings
-final int           SLEEP_AFTER_MILLIS = 1000*10; // seconds until we should sleep
+final int           SLEEP_AFTER_MILLIS = 1000*60; // seconds until we should sleep
 
-float               scaleCM = -1200.0; // default size to scale down to
+float               scaleCM = 100.0; // default size to scale down to
 float               worldRotationX = 0.0;
 float               worldRotationY = 0.0;
 
 ControlP5           cp5;
+Println             console;
 WarningSystem       system;
-Motor3dController   serial;
+Motor3dSerial       serial;
 Motor3d[]           motor;
 Target3d            actorTarget;
-PVector             actorPosition;
+Target3d            actorPosition;
 float               easing = 0.1;
 int                 maxSpeed = 1000;
 int                 prev_maxSpeed = maxSpeed;
@@ -30,6 +31,7 @@ int                 playbackPosition;
 
 int                 updateTimer;
 int                 lastChangedTimer;
+int                 lastQueryTimer;
 
 PFont               headingFont;
 PFont               bodyFont;
@@ -40,10 +42,10 @@ void setup() {
   frameRate(30);
 
   // aesthetics
-  size(1400, 700, P3D);
+  size(1400, 800, P3D);
   smooth(8);
   headingFont = loadFont("AkzidenzGrotesk-Bold-24.vlw");
-  bodyFont = loadFont("AkzidenzGrotesk-Roman-12.vlw");
+  bodyFont = loadFont("AkzidenzGrotesk-Roman-11.vlw");
 
   // setup the warning system to check the status of the installation
   // this is the main system that validates and alerts
@@ -70,10 +72,15 @@ void setup() {
   actorPosition = actorTarget.get();
 
   // connect to arduino
-  serial = new Motor3dController();
+  serial = new Motor3dSerial();
   system.arduinoConnected = serial.connect(this, "/dev/tty.usbmodem411", 115200);
 
   cp5_init();
+}
+
+void resetSleep() {
+  lastChangedTimer = millis();
+  cp5.getController("sleep").setValue(0);
 }
 
 void update() {
@@ -104,14 +111,13 @@ void update() {
         motor[2].getLengthMM(), 
         motor[3].getLengthMM()  );
 
-      lastChangedTimer = millis();
-      cp5.getController("sleep").setValue(0);
+      resetSleep();
     }
   } else {
     // nothing is happening, should we sleep?
     if (!system.isSleeping && millis() - lastChangedTimer > SLEEP_AFTER_MILLIS) {
       // times up, so sleep
-      serial.sendCommand( Motor3dController.SLEEP );
+      serial.sendCommand( Motor3dSerial.SLEEP );
     } else if (!system.isSleeping) {
       // keep counting
       cp5.getController("sleep").setValue(millis() - lastChangedTimer);
@@ -147,8 +153,24 @@ void update() {
 
 void draw() {
 
-  // run the maths and calculations (30fps)
-  update();
+  // run the maths and calculations
+  if (millis()-updateTimer > 100) {
+    updateTimer = millis();
+    if (system.arduinoConnected) {
+      update();
+    }
+  }
+
+  // run the occasional status query to arduino
+  if (millis()-lastQueryTimer > 3000) {
+    lastQueryTimer = millis();
+
+    if (!system.motorAReady || !system.motorBReady || !system.motorCReady || !system.motorDReady) {
+      serial.sendCommand(Motor3dSerial.GET_IS_CALIBRATED);
+    } else {
+      serial.sendCommand(Motor3dSerial.GET_LENGTH_MM);
+    }
+  }
 
   // redraw interface
   background(#031221);  
@@ -181,26 +203,20 @@ void draw() {
 
   // save actorTarget for 2d rendering
   actorTarget.calculate2d();
+  actorPosition.calculate2d();
 
-  noStroke();
-
-  // draw actorPosition
-  pushMatrix();
-  fill(255);
-  translate(actorPosition.x, actorPosition.y, actorPosition.z);
-  sphere(20);
-  popMatrix();
+  /*noStroke();
+   
+   // draw actorPosition
+   pushMatrix();
+   fill(255);
+   translate(actorPosition.x, actorPosition.y, actorPosition.z);
+   //sphere(20);
+   popMatrix();*/
 
   // draw motors
   for (int i = 0; i < NUM_MOTORS; i++) {
-    pushMatrix();
-    pushStyle();
-    fill(255);
     motor[i].calculate2d();
-    translate(motor[i].x, motor[i].y, motor[i].z);
-    sphere(10);
-    popStyle();
-    popMatrix();
   }
 
   // draw the recorded motion?
@@ -219,7 +235,10 @@ void draw() {
   noFill();
   strokeWeight(3);
   stroke(255);
-  ellipse(actorTarget.screenX, actorTarget.screenY, 30, 30);
+  ellipse(actorTarget.screenX, actorTarget.screenY, 15, 15);
+  noStroke();
+  fill(255);
+  ellipse(actorPosition.screenX, actorPosition.screenY, 10, 10);
   popStyle();
 
   for (int i = 0; i < NUM_MOTORS; i++) {
@@ -343,8 +362,26 @@ void serialEvent(Serial p) {
   else if ( message.substring(0, 2).equals("s=") ) 
   {
     String flag = message.substring(2);
+    boolean prevSleep = system.isSleeping;
     system.isSleeping = flag.equals("1") ? true : false;
     println("isSleeping : " + system.isSleeping);
+
+    if (prevSleep == true && system.isSleeping == false) {
+      // system has woken up, reset counters
+      lastChangedTimer = millis();
+      cp5.getController("sleep").setValue(0);
+    } else if (prevSleep == false && system.isSleeping == true) {
+      // system has gone to sleep
+    }
+  }
+
+  // check for length message
+  else if ( message.substring(0, 3).equals("mm=") ) {
+    float[] mm = float( split(message.substring(3), ',') );
+    motor[0].setLiveLength(mm[0]);
+    motor[1].setLiveLength(mm[1]);
+    motor[2].setLiveLength(mm[2]);
+    motor[3].setLiveLength(mm[3]);
   }
 
   // check for calibration
@@ -356,6 +393,19 @@ void serialEvent(Serial p) {
       system.motorBReady = list[1].equals("1") ? true : false;
       system.motorCReady = list[2].equals("1") ? true : false;
       system.motorDReady = list[3].equals("1") ? true : false;
+
+      if (system.motorAReady) {
+        cp5.getController("cp5_calibrate0").setColorForeground(color(255));
+      }
+      if (system.motorBReady) {
+        cp5.getController("cp5_calibrate1").setColorForeground(color(255));
+      }
+      if (system.motorCReady) {
+        cp5.getController("cp5_calibrate2").setColorForeground(color(255));
+      }
+      if (system.motorDReady) {
+        cp5.getController("cp5_calibrate3").setColorForeground(color(255));
+      }
     }
   }
   // just output the unknown reponse

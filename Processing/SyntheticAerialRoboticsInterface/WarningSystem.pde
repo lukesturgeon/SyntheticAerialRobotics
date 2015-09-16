@@ -3,16 +3,24 @@ class WarningSystem {
   String  _warningMessage;
 
   boolean arduinoConnected = false;
-  boolean motorAReady = true;
-  boolean motorBReady = true;
-  boolean motorCReady = true;
-  boolean motorDReady = true;
-  boolean isLocked = false;
+  boolean motorAReady = false;
+  boolean motorBReady = false;
+  boolean motorCReady = false;
+  boolean motorDReady = false;
+  boolean isLocked = true;
   boolean isSleeping = false;
   boolean isSendingData = false;
 
   WarningSystem() {
     _warningMessage = "";
+  }
+
+  boolean isCalibrated() {
+    if (motorAReady && motorBReady && motorCReady && motorDReady) {
+      return true;
+    } else {
+      return false;
+    }
   }
 
   void draw() {
@@ -21,6 +29,9 @@ class WarningSystem {
 
     if (!arduinoConnected) {
       _warningMessage = "The Arduino has not been detected.";
+      showWarning = true;
+    } else if (isSleeping) {
+      _warningMessage = "The system is sleeping";
       showWarning = true;
     } else if (!motorAReady) {
       _warningMessage = "Motor A must be calibrated";
@@ -36,9 +47,6 @@ class WarningSystem {
       showWarning = true;
     } else if (isLocked) {
       _warningMessage = "The system is locked!";
-      showWarning = true;
-    } else if (isSleeping) {
-      _warningMessage = "The system is sleeping";
       showWarning = true;
     } else if (!isSendingData) {
       _warningMessage = "No data is being sent";

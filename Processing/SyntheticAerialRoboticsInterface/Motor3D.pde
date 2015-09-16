@@ -12,14 +12,21 @@ class Motor3d extends PVector {
   void setLabel(String l) {
     _label = l;
   }
+  
+  void setLiveLength(float len){
+    _liveLength = len;
+  }
 
   void draw2d() {
     pushMatrix();
     translate(screenX, screenY);
     pushStyle();
 
+    noStroke();
     fill(255);
-    textFont(bodyFont, 12);
+
+    ellipse(0, 0, 10, 10);
+    textFont(bodyFont);
     text(_label, 0, -40);
     text("SIM:"+_length, 0, -25);
     text("ACT:"+_liveLength, 0, -10);

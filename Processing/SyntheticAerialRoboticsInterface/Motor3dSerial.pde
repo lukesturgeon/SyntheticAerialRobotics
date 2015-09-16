@@ -1,6 +1,6 @@
 import processing.serial.*;
 
-class Motor3dController {
+class Motor3dSerial {
 
   // LOCK SYSTEM
   static final String SLEEP             = "s\n";
@@ -15,10 +15,10 @@ class Motor3dController {
   static final String CALIBRATE_B       = "c1\n";
   static final String CALIBRATE_C       = "c2\n";
   static final String CALIBRATE_D       = "c3\n";
-  static final String ZERO_A            = "z0\n";
+  /*static final String ZERO_A            = "z0\n";
   static final String ZERO_B            = "z1\n";
   static final String ZERO_C            = "z2\n";
-  static final String ZERO_D            = "z3\n";
+  static final String ZERO_D            = "z3\n";*/
   static final String GET_IS_CALIBRATED = "?c\n"; // will return all 4 motors "c=0,1,0,0,1"
 
   // MOVEMENT
@@ -34,7 +34,7 @@ class Motor3dController {
 
   Serial thePort;
 
-  Motor3dController() {
+  Motor3dSerial() {
   }
 
   boolean connect(PApplet target, String portName, int baudRate) {

@@ -22,4 +22,8 @@ class Target3d extends PVector {
     screenX = screenX(this.x, this.y, this.z);
     screenY = screenY(this.x, this.y, this.z);
   }
+  
+  Target3d get() {
+    return new Target3d(this.x, this.y, this.z);
+  }
 }

@@ -1,11 +1,11 @@
 void cp5_init() {
   cp5 = new ControlP5(this);
-  cp5.setColorBackground( color(80) );
-  cp5.setColorForeground( color(255) );
-  cp5.setColorActive( color(200) );
+  cp5.setColorBackground( color(100) );
+  cp5.setColorForeground( color(200) );
+  cp5.setColorActive( color(150) );
+  cp5.setFont(bodyFont);
 
-
-
+  // VARIABLES
 
   cp5.addSlider("easing")
     .setRange(0.001, 0.5)
@@ -26,7 +26,8 @@ void cp5_init() {
 
   cp5.addSlider("sleep")
     .setLock(true)
-    .setColorForeground( color(200) )
+    .setColorForeground( color(255) )
+    //.setColorValue(color(0))
     .setRange(0, SLEEP_AFTER_MILLIS)
     .setPosition(20, 100)
     .setSize(150, 18);
@@ -41,17 +42,24 @@ void cp5_init() {
     .setLabel("sleep?")
     .setPosition(90, 250)
     .setSize(30, 30);
-  cp5.addBang("cp5_getCalibration")
+  /*cp5.addBang("cp5_getCalibration")
     .setLabel("calibrate?")
     .setPosition(160, 250)
     .setSize(30, 30);
   cp5.addBang("cp5_getLength")
     .setLabel("length?")
     .setPosition(230, 250)
+    .setSize(30, 30);*/
+    
+    
+  cp5.addBang("cp5_wake")
+    .setLabel("wake!")
+    .setPosition(20, 180)
     .setSize(30, 30);
   cp5.addToggle("cp5_sync")
-    .setLabel("send data")
-    .setPosition(230, 320)
+    .setLabel("Sync!")
+    .setColorActive(color(255, 255, 0))
+    .setPosition(90, 180)
     .setSize(30, 30);
 
 
@@ -129,18 +137,20 @@ void cp5_init() {
     cp5.addBang("cp5_cw"+i)
       .setBroadcast(false)
       .setLabelVisible(false)
+      .setColorForeground(color(165))
       .setPosition(20+(i*40), 585)
       .setSize(30, 15)
       .setBroadcast(true);
-
-    // set 0 pos
-   /* cp5.addBang("cp5_zero"+i)
-      .setBroadcast(false)
-      .setLabelVisible(false)
-      .setPosition(20+(i*40), 670)
-      .setSize(30, 30)
-      .setBroadcast(true);*/
   }
+
+
+  Textarea myTextarea = cp5.addTextarea("txt")
+    .setPosition(width-220, 20)
+    .setSize(200, 300)
+    .setFont(bodyFont)
+    .setLineHeight(15)
+    .setColorBackground(color(0, 100));
+  console = cp5.addConsole(myTextarea);
 
 
   //framerate debug
@@ -191,82 +201,101 @@ void cp5_dataSelected(File selection) {
 
 //---------------------------------------------
 void cp5_getLocked() {
-  serial.sendCommand( Motor3dController.GET_IS_LOCKED );
+  serial.sendCommand( Motor3dSerial.GET_IS_LOCKED );
 }
 void cp5_getSleep() {
-  serial.sendCommand( Motor3dController.GET_IS_SLEEP );
+  serial.sendCommand( Motor3dSerial.GET_IS_SLEEP );
 }
 void cp5_getCalibration() {
   println("get calibration");
-  serial.sendCommand( Motor3dController.GET_IS_CALIBRATED );
+  serial.sendCommand( Motor3dSerial.GET_IS_CALIBRATED );
 }
 void cp5_getLength() {
-  serial.sendCommand( Motor3dController.GET_LENGTH_MM );
+  serial.sendCommand( Motor3dSerial.GET_LENGTH_MM );
 }
 void cp5_sync(boolean flag) {
-  system.isSendingData = flag;
+  if (system.isCalibrated()) {
+    system.isSendingData = flag;
+  } else {
+    println("you cannot sync until the motors are calibrated!");
+  }
+}
+void cp5_wake() {
+  serial.sendCommand( Motor3dSerial.WAKE );
 }
 
 //---------------------------------------------
 void cp5_unlock() {
-  serial.sendCommand( Motor3dController.UNLOCK );
+  serial.sendCommand( Motor3dSerial.UNLOCK );
 }
 void cp5_lock() {
-  serial.sendCommand( Motor3dController.LOCK );
+  serial.sendCommand( Motor3dSerial.LOCK );
 }
 
 //---------------------------------------------
 void cp5_calibrate0() {
-  serial.sendCommand( Motor3dController.CALIBRATE_A );
+  resetSleep();
+  serial.sendCommand( Motor3dSerial.CALIBRATE_A );
 }
 void cp5_calibrate1() {
-  serial.sendCommand( Motor3dController.CALIBRATE_B );
+  resetSleep();
+  serial.sendCommand( Motor3dSerial.CALIBRATE_B );
 }
 void cp5_calibrate2() {
-  serial.sendCommand( Motor3dController.CALIBRATE_C );
+  resetSleep();
+  serial.sendCommand( Motor3dSerial.CALIBRATE_C );
 }
 void cp5_calibrate3() {
-  serial.sendCommand( Motor3dController.CALIBRATE_D );
+  resetSleep();
+  serial.sendCommand( Motor3dSerial.CALIBRATE_D );
 }
 
 //---------------------------------------------
 void cp5_cw0() {
-  serial.sendCommand( Motor3dController.STEP_CW_A );
+  resetSleep();
+  serial.sendCommand( Motor3dSerial.STEP_CW_A );
 }
 void cp5_cw1() {
-  serial.sendCommand( Motor3dController.STEP_CW_B );
+  resetSleep();
+  serial.sendCommand( Motor3dSerial.STEP_CW_B );
 }
 void cp5_cw2() {
-  serial.sendCommand( Motor3dController.STEP_CW_C );
+  resetSleep();
+  serial.sendCommand( Motor3dSerial.STEP_CW_C );
 }
 void cp5_cw3() {
-  serial.sendCommand( Motor3dController.STEP_CW_D );
+  resetSleep();
+  serial.sendCommand( Motor3dSerial.STEP_CW_D );
 }
 
 //---------------------------------------------
 void cp5_ccw0() {
-  serial.sendCommand( Motor3dController.STEP_CCW_A );
+  resetSleep();
+  serial.sendCommand( Motor3dSerial.STEP_CCW_A );
 }
 void cp5_ccw1() {
-  serial.sendCommand( Motor3dController.STEP_CCW_B );
+  resetSleep();
+  serial.sendCommand( Motor3dSerial.STEP_CCW_B );
 }
 void cp5_ccw2() {
-  serial.sendCommand( Motor3dController.STEP_CCW_C );
+  resetSleep();
+  serial.sendCommand( Motor3dSerial.STEP_CCW_C );
 }
 void cp5_ccw3() {
-  serial.sendCommand( Motor3dController.STEP_CCW_D );
+  resetSleep();
+  serial.sendCommand( Motor3dSerial.STEP_CCW_D );
 }
 
 //---------------------------------------------
 /*void cp5_zero0() {
-  serial.sendCommand( Motor3dController.ZERO_A );
-}
-void cp5_zero1() {
-  serial.sendCommand( Motor3dController.ZERO_B );
-}
-void cp5_zero2() {
-  serial.sendCommand( Motor3dController.ZERO_C );
-}
-void cp5_zero3() {
-  serial.sendCommand( Motor3dController.ZERO_D );
-}*/
+ serial.sendCommand( Motor3dSerial.ZERO_A );
+ }
+ void cp5_zero1() {
+ serial.sendCommand( Motor3dSerial.ZERO_B );
+ }
+ void cp5_zero2() {
+ serial.sendCommand( Motor3dSerial.ZERO_C );
+ }
+ void cp5_zero3() {
+ serial.sendCommand( Motor3dSerial.ZERO_D );
+ }*/
