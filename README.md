@@ -7,10 +7,10 @@ Working repository for control software and Arduino code to choreograph a roboti
 ## Arduino ##
 
 #### AccelStepper_x4
-A working sketch that allows serial communication to control and calibrate four stepper motors simultaniously.
+A working sketch that allows serial communication to control and calibrate four stepper motors simultaniously. At it's core is the Calibrated_AccelStepper class which extends the awesome [AccelStepper library](http://www.airspayce.com/mikem/arduino/AccelStepper/) to include a calibration method using a limit switch to wind in and then unwind the cables.
 
 ##### Commands
-- 1,2,3,4 : four ints to move each motor to the new length in MM
+- 1,2,3,4 : four long int to move each motor to the new length in MM
 - s : sleep
 - w : wake
 - u : unlock
@@ -30,11 +30,11 @@ A working sketch that allows serial communication to control and calibrate four 
 
 ## Processing ##
 
-#### single_stepper_controller
-A working sketch that includes all basic interface elements necessary to interact with a single motor.
-
 #### SyntheticAerialRoboticsInterface
 A working sketch to visualise and measure the position of the actor in 3D space. Using real-world measurements in CM to construct the box, all values afterwards will work at that scale.
+
+#### single_stepper_controller
+A working sketch that includes all basic interface elements necessary to interact with a single motor.
 
 ---
 
