@@ -111,10 +111,11 @@ void serialEvent()
         //      stepper[0].moveTo( mmToSteps(a) );
         //      stepper[1].moveTo( mmToSteps(b) );
         //      stepper[2].moveTo( mmToSteps(c) );
-        //      stepper[3].moveTo( mmToSteps(d) );
+        stepper[3].moveToMM(d);
 
-        Serial.print("a goes to : ");
-        Serial.println(a);
+
+//        Serial.print("D : ");
+//        Serial.println(d);
       }
     }
 

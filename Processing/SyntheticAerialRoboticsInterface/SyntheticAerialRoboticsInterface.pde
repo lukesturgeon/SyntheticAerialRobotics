@@ -44,8 +44,8 @@ void setup() {
   // aesthetics
   size(1400, 800, P3D);
   smooth(8);
-  headingFont = loadFont("AkzidenzGrotesk-Bold-24.vlw");
-  bodyFont = loadFont("AkzidenzGrotesk-Roman-11.vlw");
+  headingFont = loadFont("fonts/AkzidenzGrotesk-Bold-24.vlw");
+  bodyFont = loadFont("fonts/AkzidenzGrotesk-Roman-11.vlw");
 
   // setup the warning system to check the status of the installation
   // this is the main system that validates and alerts
@@ -101,6 +101,7 @@ void update() {
       hasChanged = true;
     }
   }
+
   if (hasChanged) {
     if (!system.isLocked) {
       // this is it, send lengths to arduino
@@ -172,8 +173,8 @@ void draw() {
     }
   }
 
-  // redraw interface
-  background(#031221);  
+  // redraw interface 
+  background(#020320);
 
   pushMatrix();
   translate(width/2, (height/2), scaleCM);
@@ -183,7 +184,7 @@ void draw() {
 
   //draw frame
   noFill();
-  stroke(#5E6E8E);
+  stroke(#82A5C6);
   box(WIDTH_CM, HEIGHT_CM, DEPTH_CM);
 
   // draw floor
@@ -356,6 +357,10 @@ void serialEvent(Serial p) {
     String flag = message.substring(2);
     system.isLocked = flag.equals("1") ? true : false;
     println("isLocked : " + system.isLocked);
+    Toggle t = (Toggle) cp5.getController("cp5_unlock");
+    t.setBroadcast(false);
+    t.setValue(!system.isLocked);
+    t.setBroadcast(true);
   }
 
   // check for sleep message
@@ -366,12 +371,19 @@ void serialEvent(Serial p) {
     system.isSleeping = flag.equals("1") ? true : false;
     println("isSleeping : " + system.isSleeping);
 
+    // update the ui to show the correct thing
+    Toggle t = (Toggle) cp5.getController("cp5_wake");
+    t.setBroadcast(false);
+    t.setValue(!system.isSleeping);
+    t.setBroadcast(true);
+
     if (prevSleep == true && system.isSleeping == false) {
       // system has woken up, reset counters
       lastChangedTimer = millis();
       cp5.getController("sleep").setValue(0);
     } else if (prevSleep == false && system.isSleeping == true) {
       // system has gone to sleep
+      cp5.getController("sleep").setValue(SLEEP_AFTER_MILLIS );
     }
   }
 
