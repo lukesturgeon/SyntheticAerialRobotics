@@ -1,23 +1,12 @@
-String utils_getUniqueFileName() {
-  String str = "";
+String utils_getTimestamp() {
+  String timestamp = "";
 
-  int y = year();
-  str += String.valueOf(y);
+  timestamp += year() + "-";
+  timestamp += nf(month(), 2) + "-";
+  timestamp += nf(day(), 2) + "_";
+  timestamp += nf(hour(), 2) + "-";
+  timestamp += nf(minute(), 2) + "-";
+  timestamp += nf(second(), 2);
 
-  int j = month();
-  str += "-"+String.valueOf(j);
-
-  int d = day();
-  str += "-"+String.valueOf(d);
-
-  int h = hour();
-  str += "_"+String.valueOf(h);
-
-  int m = minute();
-  str += "-"+String.valueOf(m);
-
-  int s = second();
-  str += "-"+String.valueOf(s);
-
-  return str;
+  return timestamp;
 }

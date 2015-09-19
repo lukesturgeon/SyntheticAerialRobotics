@@ -2,12 +2,18 @@ class Calibrated_AccelStepper : public AccelStepper
 {
   public :
 
+    const float STEPS_PER_MM = 400.0f / 201.0f; // (400steps / 215mm
+
     Calibrated_AccelStepper(int stepPin, int dirPin, int sensorPin) :
       AccelStepper(AccelStepper::DRIVER, stepPin, dirPin) {
       _stepPin = stepPin;
       _dirPin = dirPin;
       _sensorPin = sensorPin;
       _isCalibrated = _isCalibratingIn = _isCalibratingOut = false;
+      _isFreeStepping = false;
+
+      _minSteps = 0;
+      _maxSteps = 999999;
     }
 
     /**
@@ -39,6 +45,7 @@ class Calibrated_AccelStepper : public AccelStepper
         if (isSensorBlocked())
         {
           // we are close enough, start dropping
+          moveTo( currentPosition() + 10 );
           _isCalibratingIn = false;
           _isCalibratingOut = true;
         } else {
@@ -83,6 +90,33 @@ class Calibrated_AccelStepper : public AccelStepper
       return _isCalibrated;
     }
 
+    bool isFreeStepping() {
+      return _isFreeStepping;
+    }
+
+    void freeStep(int steps) {
+      _isFreeStepping = true;
+
+      if (currentPosition() + steps < _minSteps) {
+        // go the minimum remaining
+        move( _minSteps - currentPosition() );
+      } else if (currentPosition() + steps > _maxSteps) {
+        // go the max remaining
+        move( _maxSteps - currentPosition() );
+      } else {
+        // just move because it's a safe number
+        move( steps );
+      }
+    }
+
+    void runFreeStep() {
+      if (distanceToGo() == 0) {
+        _isFreeStepping = false;
+      } else {
+        run();
+      }
+    }
+
     void stepCW() {
       digitalWrite(_dirPin, HIGH);
       digitalWrite(_stepPin, HIGH);
@@ -96,50 +130,43 @@ class Calibrated_AccelStepper : public AccelStepper
     }
 
     void moveToMM(float len) {
-      float stepsPerRevolution = 400.0f;
-      float lengthPerRevolutionMM = 200.0f;
-      int numSteps = int( (stepsPerRevolution / lengthPerRevolutionMM) * len );
+      long numSteps = long( STEPS_PER_MM * len );
+
+      Serial.print("len:");
+      Serial.print(len);
+      Serial.print(" = steps:");
+      Serial.println(numSteps);
 
       // constrain
-      if (_minPosition != -1 && numSteps < _minPosition)
-      {
-        // limit the target
-        moveTo(_minPosition);
-      }
-      else if (_maxPosition != -1 && numSteps > _maxPosition)
-      {
-        // limit the target
-        moveTo(_maxPosition);
-      }
-      else
-      {
-        // do not limit
-        moveTo(numSteps);
-      }
+      moveTo( constrain(numSteps, _minSteps, _maxSteps) );
+    }
 
+    long currentLengthMM() {
+      return currentPosition();
     }
 
     /**
      * Set the minimum position in steps that motor can move to
      */
-    void setMinPosition(int p) {
-      _minPosition = p;
+    void setMinSteps(int p) {
+      _minSteps = p;
     }
 
     /**
      * Set the maximum position in steps that motor can move to
      */
-    void setMaxPosition(int p) {
-      _maxPosition = p;
+    void setMaxSteps(int p) {
+      _maxSteps = p;
     }
 
   private:
     bool  _isCalibrated;
     bool  _isCalibratingIn;
     bool  _isCalibratingOut;
+    bool  _isFreeStepping;
     int   _stepPin;
     int   _dirPin;
     int   _sensorPin;
-    int   _minPosition = -1;
-    int   _maxPosition = -1;
+    long   _minSteps;
+    long   _maxSteps;
 };

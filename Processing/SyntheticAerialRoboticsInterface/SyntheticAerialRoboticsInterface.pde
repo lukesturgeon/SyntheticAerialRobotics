@@ -1,36 +1,55 @@
 import controlP5.*; //<>//
 
-final float     WIDTH_CM = 1500; // left to right (in cm)
-final float     DEPTH_CM = 1500; // front to back (in cm)
-final float     HEIGHT_CM = 800; // top to bottom (in cm)
-final int       NUM_MOTORS = 4; // controls the loops and settings
+final float         WIDTH_CM = 325.50; // left to right (in cm)
+final float         DEPTH_CM = 303.00; // front to back (in cm)
+final float         HEIGHT_CM = 279.50; // top to bottom (in cm)
+final int           NUM_MOTORS = 4; // controls the loops and settings
+final long          SLEEP_AFTER_MILLIS = 1000*60*10; // seconds until we should sleep
 
-float     scaleCM = -1200.0; // default size to scale down to
-float     worldRotationX = 0.0;
-float     worldRotationY = 0.0;
+float               scaleCM = 100.0; // default size to scale down to
+float               worldRotationX = 0.0;
+float               worldRotationY = 0.0;
 
-Motor3D[] motorPositions;
-PVector   actorTarget;
-PVector   actorPosition;
-float     easing = 0.1;
+ControlP5           cp5;
+Println             console;
+WarningSystem       system;
+Motor3dSerial       serial;
+Motor3d[]           motor;
+Target3d            actorTarget;
+Target3d            actorPosition;
+float               easing = 0.1;
+int                 maxSpeed = 1000;
+int                 prev_maxSpeed = maxSpeed;
+int                 maxAcceleration = 500;
+int                 prev_maxAcceleration = maxAcceleration;
 
-Table     recordData;
-int       recordTimer;
-boolean   isRecording;
-boolean   isPlaying;
-int       playbackPosition;
+Table               recordData;
+int                 recordTimer;
+boolean             isRecording;
+boolean             isPlaying;
+int                 playbackPosition;
 
-ControlP5 cp5;
-String warnMessage = "";
-boolean isSystemLocked = true;
+int                 updateTimer;
+int                 lastChangedTimer;
+int                 lastQueryTimer;
 
-Serial3D serial;
+PFont               headingFont;
+PFont               bodyFont;
 
 void setup() {
-  size(1280, 800, P3D);
-  smooth(8);
 
-  cp5_init();
+  // to improve performance and run less maths calculations
+  frameRate(30);
+
+  // aesthetics
+  size(1400, 800, P3D);
+  smooth(8);
+  headingFont = loadFont("fonts/AkzidenzGrotesk-Bold-24.vlw");
+  bodyFont = loadFont("fonts/AkzidenzGrotesk-Roman-11.vlw");
+
+  // setup the warning system to check the status of the installation
+  // this is the main system that validates and alerts
+  system = new WarningSystem();
 
   isRecording = false;
   recordData = new Table();
@@ -38,22 +57,30 @@ void setup() {
   recordData.addColumn("y");
   recordData.addColumn("z");
 
-  motorPositions = new Motor3D[4];
-  motorPositions[0] = new Motor3D(-WIDTH_CM/2, -HEIGHT_CM/2, -DEPTH_CM/2);
-  motorPositions[1] = new Motor3D(WIDTH_CM/2, -HEIGHT_CM/2, -DEPTH_CM/2);
-  motorPositions[2] = new Motor3D(WIDTH_CM/2, -HEIGHT_CM/2, DEPTH_CM/2);
-  motorPositions[3] = new Motor3D(-WIDTH_CM/2, -HEIGHT_CM/2, DEPTH_CM/2);
+  motor = new Motor3d[4];
+  motor[0] = new Motor3d(-WIDTH_CM/2, -HEIGHT_CM/2, -DEPTH_CM/2);
+  motor[0].setLabel("A");
+  motor[1] = new Motor3d(WIDTH_CM/2, -HEIGHT_CM/2, -DEPTH_CM/2);
+  motor[1].setLabel("B");
+  motor[2] = new Motor3d(WIDTH_CM/2, -HEIGHT_CM/2, DEPTH_CM/2);
+  motor[2].setLabel("C");
+  motor[3] = new Motor3d(-WIDTH_CM/2, -HEIGHT_CM/2, DEPTH_CM/2);
+  motor[3].setLabel("D");
 
   // start in center of floor
-  actorTarget  = new PVector(0, HEIGHT_CM/2, 0);
+  actorTarget  = new Target3d(0, HEIGHT_CM/2, 0);
   actorPosition = actorTarget.get();
 
   // connect to arduino
-  serial = new Serial3D();
-  if (!serial.connect(this, "/dev/tty.usbmodem411", 115200)) {
-    showWarning("The Arduino was not detected! Connect Arduino USB cable and restart software.");
-  }
-  
+  serial = new Motor3dSerial();
+  system.arduinoConnected = serial.connect(this, "/dev/tty.usbmodem411", 115200);
+
+  cp5_init();
+}
+
+void resetSleep() {
+  lastChangedTimer = millis();
+  cp5.getController("sleep").setValue(0);
 }
 
 void update() {
@@ -66,10 +93,36 @@ void update() {
   actorPosition.y += dy * easing;
   actorPosition.z += dz * easing;
 
+  // have the lengths changed?
+  boolean hasChanged = false;
   for (int i = 0; i < NUM_MOTORS; i++) {
-    motorPositions[i].calculateLengthTo( actorPosition );
-    Slider s = (Slider) cp5.getController("cp5_length"+i);
-    s.setValue(motorPositions[i].getLength());
+    motor[i].calculateLengthTo( actorPosition );
+    if (motor[i].hasChanged()) {
+      hasChanged = true;
+    }
+  }
+
+  if (hasChanged) {
+    if (!system.isLocked && system.isSendingData) {
+      // this is it, send lengths to arduino
+      // if the system is sleeping it will automatically wake
+      serial.sendLengthMM(  
+        motor[0].getLengthMM(), 
+        motor[1].getLengthMM(), 
+        motor[2].getLengthMM(), 
+        motor[3].getLengthMM()  );
+
+      resetSleep();
+    }
+  } else {
+    // nothing is happening, should we sleep?
+    if (!system.isSleeping && millis() - lastChangedTimer > SLEEP_AFTER_MILLIS) {
+      // times up, so sleep
+      serial.sendCommand( Motor3dSerial.SLEEP );
+    } else if (!system.isSleeping) {
+      // keep counting
+      cp5.getController("sleep").setValue(millis() - lastChangedTimer);
+    }
   }
 
   // are we recording
@@ -101,19 +154,37 @@ void update() {
 
 void draw() {
 
-  // run program as normal
-  update();
+  // run the maths and calculations
+  if (millis()-updateTimer > 100) {
+    updateTimer = millis();
+    if (system.arduinoConnected) {
+      update();
+    }
+  }
 
-  background(0, 0, 0);
+  // run the occasional status query to arduino
+  if (millis()-lastQueryTimer > 3000) {
+    lastQueryTimer = millis();
+
+    if (!system.motorAReady || !system.motorBReady || !system.motorCReady || !system.motorDReady) {
+      serial.sendCommand(Motor3dSerial.GET_IS_CALIBRATED);
+    } else {
+      serial.sendCommand(Motor3dSerial.GET_LENGTH_MM);
+    }
+  }
+
+  // redraw interface 
+  background(#020320);
 
   pushMatrix();
   translate(width/2, (height/2), scaleCM);
   rotateX(worldRotationX);
   rotateY(worldRotationY);
 
+
   //draw frame
   noFill();
-  stroke(#444444);
+  stroke(#82A5C6);
   box(WIDTH_CM, HEIGHT_CM, DEPTH_CM);
 
   // draw floor
@@ -127,44 +198,26 @@ void draw() {
   // draw cables
   stroke(255);
   for (int i = 0; i < 4; i++) {
-    line(motorPositions[i].x, motorPositions[i].y, motorPositions[i].z, 
+    line(motor[i].x, motor[i].y, motor[i].z, 
       actorPosition.x, actorPosition.y, actorPosition.z);
   }
-  noStroke();
 
-  // draw actorTarget
-  pushMatrix();
-  fill(100);
-  translate(actorTarget.x, actorTarget.y, actorTarget.z);
-  sphere(20);
-  popMatrix();
+  // save actorTarget for 2d rendering
+  actorTarget.calculate2d();
+  actorPosition.calculate2d();
 
-  stroke(50, 50, 0);
-  line(  actorTarget.x, actorTarget.y, -DEPTH_CM/2, 
-    actorTarget.x, actorTarget.y, DEPTH_CM/2  );
-  line(  -WIDTH_CM/2, actorTarget.y, actorTarget.z, 
-    WIDTH_CM/2, actorTarget.y, actorTarget.z  );
-  line(  actorTarget.x, -HEIGHT_CM/2, actorTarget.z, 
-    actorTarget.x, HEIGHT_CM/2, actorTarget.z  );
-
-  noStroke();
-
-  // draw actorPosition
-  pushMatrix();
-  fill(255);
-  translate(actorPosition.x, actorPosition.y, actorPosition.z);
-  sphere(20);
-  popMatrix();
+  /*noStroke();
+   
+   // draw actorPosition
+   pushMatrix();
+   fill(255);
+   translate(actorPosition.x, actorPosition.y, actorPosition.z);
+   //sphere(20);
+   popMatrix();*/
 
   // draw motors
   for (int i = 0; i < NUM_MOTORS; i++) {
-    pushMatrix();
-    pushStyle();
-    fill(255);
-    translate(motorPositions[i].x, motorPositions[i].y, motorPositions[i].z);
-    sphere(10);
-    popStyle();
-    popMatrix();
+    motor[i].calculate2d();
   }
 
   // draw the recorded motion?
@@ -179,33 +232,45 @@ void draw() {
   //== end world translate and zoom ==//
   popMatrix();
 
-  if ( !warnMessage.equals("") ) {
-    // there's an error
-    //pushStyle();
-    fill(255, 255, 0);
-    rect(200, 300, width-400, height-600);
-    fill(0);
-    //textSize(20);
-    textAlign(CENTER, CENTER);
-    text(warnMessage, width/2, height/2);
-    //popStyle();
+  pushStyle();
+  noFill();
+  strokeWeight(3);
+  stroke(255);
+  ellipse(actorTarget.screenX, actorTarget.screenY, 15, 15);
+  noStroke();
+  fill(255);
+  ellipse(actorPosition.screenX, actorPosition.screenY, 10, 10);
+  popStyle();
+
+  for (int i = 0; i < NUM_MOTORS; i++) {
+    motor[i].draw2d();
+  }
+
+  system.draw();
+}
+
+void mouseReleased() {
+  // check the arduino variables
+  if (maxSpeed != prev_maxSpeed) {
+    serial.sendMaxSpeed(maxSpeed);
+    prev_maxSpeed = maxSpeed;
+  } else if (maxAcceleration != prev_maxAcceleration) {
+    serial.sendMaxAcceleration(maxAcceleration);
+    prev_maxAcceleration = maxAcceleration;
   }
 }
 
-void showWarning(String e) {
-  warnMessage = e;
-}
-
-void clearWarning() {
-  warnMessage = "";
-}
-
 void mouseDragged() {
-  if (keyPressed && key == 'w') {
+  if (keyPressed && key == ' ') {
     // add x/y to the rotation
     worldRotationX -= (mouseY-pmouseY) * 0.01;
     worldRotationY += (mouseX-pmouseX) * 0.01;
   } 
+
+  // safety lock
+  if (system.isLocked) {
+    return;
+  }
 
   // lock to Y axis
   else if (keyPressed && key == 'y') {
@@ -286,51 +351,73 @@ void serialEvent(Serial p) {
   String message = p.readString();
   message = trim(message);
 
-  /*if ( message.substring(0, 3).equals("mm=") ) 
-   {
-   String mm = message.substring(3);
-   currentLength = int( mm );
-   } else if ( message.substring(0, 2).equals("s=") ) 
-   {
-   String s = message.substring(2);
-   currentStep = int( s );
-   cp5.getController("currentStep").setValue(currentStep);
-   } else if ( message.substring(0, 2).equals("c=") ) 
-   {
-   String c = message.substring(2);
-   println("calibration = " + c);
-   
-   
-   } else if ( message.substring(0, 2).equals("l=") ) 
-   {
-   String l = message.substring(2);
-   isSystemLocked = l.equals("1") ? true : false;
-   Toggle t = (Toggle) cp5.getController("lockToggle");
-   t.setBroadcast(false);
-   t.setValue(isSystemLocked);
-   t.setBroadcast(true);
-   } else
-   {
-   println("> "+message);
-   }*/
-
+  // check for locked message
   if ( message.substring(0, 2).equals("l=") ) 
   {
-    String l = message.substring(2);
-    isSystemLocked = l.equals("1") ? true : false;    
-    if (isSystemLocked) {
-      showWarning("Arduino is locked. A cable is too close!");
-    } else {
-      clearWarning();
+    String flag = message.substring(2);
+    system.isLocked = flag.equals("1") ? true : false;
+    println("isLocked : " + system.isLocked);
+    Toggle t = (Toggle) cp5.getController("cp5_unlock");
+    t.setBroadcast(false);
+    t.setValue(!system.isLocked);
+    t.setBroadcast(true);
+  }
+
+  // check for sleep message
+  else if ( message.substring(0, 2).equals("s=") ) 
+  {
+    String flag = message.substring(2);
+    boolean prevSleep = system.isSleeping;
+    system.isSleeping = flag.equals("1") ? true : false;
+    println("isSleeping : " + system.isSleeping);
+
+    // update the ui to show the correct thing
+    Toggle t = (Toggle) cp5.getController("cp5_wake");
+    t.setBroadcast(false);
+    t.setValue(!system.isSleeping);
+    t.setBroadcast(true);
+
+    if (prevSleep == true && system.isSleeping == false) {
+      // system has woken up, reset counters
+      lastChangedTimer = millis();
+      cp5.getController("sleep").setValue(0);
+    } else if (prevSleep == false && system.isSleeping == true) {
+      // system has gone to sleep
+      cp5.getController("sleep").setValue(SLEEP_AFTER_MILLIS );
     }
-  } else if ( message.substring(0, 2).equals("c=") ) {    
+  }
+
+  // check for length message
+  else if ( message.substring(0, 3).equals("mm=") ) {
+    float[] mm = float( split(message.substring(3), ',') );
+    motor[0].setLiveLength(mm[0]);
+    motor[1].setLiveLength(mm[1]);
+    motor[2].setLiveLength(mm[2]);
+    motor[3].setLiveLength(mm[3]);
+  }
+
+  // check for calibration
+  else if ( message.substring(0, 2).equals("c=") ) {    
     String[] list = split(message.substring(2), ',');
     for (int i = 0; i < list.length; i++) {
       // mark as calibrated
-      Toggle t = (Toggle) cp5.getController("cp5_calibrate"+i);
-      t.setBroadcast(false);
-      t.setValue( list[i].equals("1") ? true : false );
-      t.setBroadcast(true);
+      system.motorAReady = list[0].equals("1") ? true : false;
+      system.motorBReady = list[1].equals("1") ? true : false;
+      system.motorCReady = list[2].equals("1") ? true : false;
+      system.motorDReady = list[3].equals("1") ? true : false;
+
+      if (system.motorAReady) {
+        cp5.getController("cp5_calibrate0").setColorForeground(color(255));
+      }
+      if (system.motorBReady) {
+        cp5.getController("cp5_calibrate1").setColorForeground(color(255));
+      }
+      if (system.motorCReady) {
+        cp5.getController("cp5_calibrate2").setColorForeground(color(255));
+      }
+      if (system.motorDReady) {
+        cp5.getController("cp5_calibrate3").setColorForeground(color(255));
+      }
     }
   }
   // just output the unknown reponse
