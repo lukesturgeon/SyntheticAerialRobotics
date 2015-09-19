@@ -69,7 +69,7 @@ class Motor3dSerial {
   }
 
   void sendLengthMM(int a, int b, int c, int d) {
-    println(a+","+b+","+c+","+d);
+    //println(a+","+b+","+c+","+d);
     thePort.write( a + "," + b + "," + c + "," + d + "\n" );
   }
 }

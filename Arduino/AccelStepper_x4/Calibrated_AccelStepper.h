@@ -2,6 +2,8 @@ class Calibrated_AccelStepper : public AccelStepper
 {
   public :
 
+    const float STEPS_PER_MM = 400.0f / 201.0f; // (400steps / 215mm
+
     Calibrated_AccelStepper(int stepPin, int dirPin, int sensorPin) :
       AccelStepper(AccelStepper::DRIVER, stepPin, dirPin) {
       _stepPin = stepPin;
@@ -11,7 +13,7 @@ class Calibrated_AccelStepper : public AccelStepper
       _isFreeStepping = false;
 
       _minSteps = 0;
-      _maxSteps = 400 * 10;
+      _maxSteps = 999999;
     }
 
     /**
@@ -43,6 +45,7 @@ class Calibrated_AccelStepper : public AccelStepper
         if (isSensorBlocked())
         {
           // we are close enough, start dropping
+          moveTo( currentPosition() + 10 );
           _isCalibratingIn = false;
           _isCalibratingOut = true;
         } else {
@@ -97,13 +100,9 @@ class Calibrated_AccelStepper : public AccelStepper
       if (currentPosition() + steps < _minSteps) {
         // go the minimum remaining
         move( _minSteps - currentPosition() );
-        Serial.print("below minstep, adjusted to ");
-        Serial.println(_minSteps);
       } else if (currentPosition() + steps > _maxSteps) {
         // go the max remaining
         move( _maxSteps - currentPosition() );
-        Serial.print("above maxstep, adjusted to ");
-        Serial.println(_maxSteps);
       } else {
         // just move because it's a safe number
         move( steps );
@@ -131,9 +130,7 @@ class Calibrated_AccelStepper : public AccelStepper
     }
 
     void moveToMM(float len) {
-      float stepsPerRevolution = 400.0f;
-      float lengthPerRevolutionMM = 215.0f;
-      int numSteps = int( (stepsPerRevolution / lengthPerRevolutionMM) * len );
+      long numSteps = long( STEPS_PER_MM * len );
 
       Serial.print("len:");
       Serial.print(len);
@@ -142,6 +139,10 @@ class Calibrated_AccelStepper : public AccelStepper
 
       // constrain
       moveTo( constrain(numSteps, _minSteps, _maxSteps) );
+    }
+
+    long currentLengthMM() {
+      return currentPosition();
     }
 
     /**
@@ -166,6 +167,6 @@ class Calibrated_AccelStepper : public AccelStepper
     int   _stepPin;
     int   _dirPin;
     int   _sensorPin;
-    int   _minSteps;
-    int   _maxSteps;
+    long   _minSteps;
+    long   _maxSteps;
 };

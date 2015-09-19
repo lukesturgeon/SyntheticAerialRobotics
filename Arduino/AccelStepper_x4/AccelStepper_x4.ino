@@ -25,9 +25,9 @@ void setup()
   for (int i = 0; i < numMotors; i++)
   {
     stepper[i].setMinSteps(0);
-    stepper[i].setMaxSteps(3600);
-    stepper[i].setMaxSpeed(1000.0);
-    stepper[i].setAcceleration(500.0);
+    stepper[i].setMaxSteps(11637);
+    stepper[i].setMaxSpeed(200);
+    stepper[i].setAcceleration(200);
   }
 
   Serial.begin(115200);
@@ -108,14 +108,10 @@ void serialEvent()
         long d = atol( strtok(0, ",") );
 
         // update targets
-        //      stepper[0].moveTo( mmToSteps(a) );
-        //      stepper[1].moveTo( mmToSteps(b) );
-        //      stepper[2].moveTo( mmToSteps(c) );
-        stepper[3].moveToMM(d);
-
-
-//        Serial.print("D : ");
-//        Serial.println(d);
+        stepper[0].moveToMM( a );
+        stepper[1].moveToMM( b );
+        stepper[2].moveToMM( c );
+        stepper[3].moveToMM( d );
       }
     }
 

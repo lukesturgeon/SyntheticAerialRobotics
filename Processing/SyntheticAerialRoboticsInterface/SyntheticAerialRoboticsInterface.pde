@@ -1,10 +1,10 @@
 import controlP5.*; //<>//
 
-final float         WIDTH_CM = 301.00; // left to right (in cm)
-final float         DEPTH_CM = 290.52; // front to back (in cm)
-final float         HEIGHT_CM = 279.40; // top to bottom (in cm)
+final float         WIDTH_CM = 325.50; // left to right (in cm)
+final float         DEPTH_CM = 303.00; // front to back (in cm)
+final float         HEIGHT_CM = 279.50; // top to bottom (in cm)
 final int           NUM_MOTORS = 4; // controls the loops and settings
-final int           SLEEP_AFTER_MILLIS = 1000*60; // seconds until we should sleep
+final long          SLEEP_AFTER_MILLIS = 1000*60*10; // seconds until we should sleep
 
 float               scaleCM = 100.0; // default size to scale down to
 float               worldRotationX = 0.0;
@@ -103,7 +103,7 @@ void update() {
   }
 
   if (hasChanged) {
-    if (!system.isLocked) {
+    if (!system.isLocked && system.isSendingData) {
       // this is it, send lengths to arduino
       // if the system is sleeping it will automatically wake
       serial.sendLengthMM(  

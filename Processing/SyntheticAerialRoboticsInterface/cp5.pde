@@ -14,13 +14,19 @@ void cp5_init() {
 
   cp5.addSlider("maxSpeed")
     .setLabel("speed")
-    .setRange(100, 1500)
+    .setRange(100, 400)
+    .setValue(200)
+    .setNumberOfTickMarks(13)
+    .showTickMarks(false)
     .setPosition(20, 40)
     .setSize(190, 18);
 
   cp5.addSlider("maxAcceleration")
     .setLabel("acceleration")
-    .setRange(100, 1500)
+    .setRange(100, 400)
+    .setValue(200)
+    .setNumberOfTickMarks(13)
+    .showTickMarks(false)
     .setPosition(20, 60)
     .setSize(190, 18);
 
@@ -31,37 +37,41 @@ void cp5_init() {
     .setPosition(20, 100)
     .setSize(190, 18);
 
+  // labels
+  cp5.addTextlabel("calibration")
+    .setValueLabel("1. CALIBRATE")
+    .setPosition(20-3, 285);  
+
+  cp5.addTextlabel("actions")
+    .setValueLabel("2. ACTIONS")
+    .setPosition(20-3, 385);  
+
+  cp5.addTextlabel("step")
+    .setValueLabel("3. ADVANCED")
+    .setPosition(20-3, 495);
+
   // buttons
 
   cp5.addToggle("cp5_wake")
-    .setLabel("wake")
+    .setLabel("awake")
     .setState(true)
     .setColorActive(color(255))
-    .setPosition(20, 280)
+    .setPosition(20, 400)
     .setSize(50, 50);
 
   cp5.addToggle("cp5_unlock")
     .setLabel("unlock")
     .setColorActive(color(255))
-    .setPosition(90, 280)
+    .setPosition(90, 400)
     .setSize(50, 50);
 
   cp5.addToggle("cp5_sync")
     .setLabel("Sync")
     .setColorActive(color(255))
-    .setPosition(160, 280)
+    .setPosition(160, 400)
     .setSize(50, 50);
 
-
-  // CALIBRATON
-  cp5.addTextlabel("calibration")
-    .setValueLabel("CALIBRATE")
-    .setPosition(20-3, 385);  
-
-  // nudge
-  cp5.addTextlabel("step")
-    .setValueLabel("STEP -/+")
-    .setPosition(20-3, 465);
+  // motor calibration buttons
 
   String[] labels = {"A", "B", "C", "D"};
   for (int i = 0; i < NUM_MOTORS; i++) {
@@ -70,21 +80,21 @@ void cp5_init() {
     cp5.addBang("cp5_calibrate"+i)
       .setLabel(labels[i])
       .setColorForeground( color(50) )
-      .setPosition(20+(i*50), 400)
+      .setPosition(20+(i*50), 300)
       .setSize(40, 40);
 
     // counter-clockwise
     cp5.addBang("cp5_ccw"+i)
       .setLabelVisible(false)
       .setColorForeground( color(50) )
-      .setPosition(20+(i*50), 480)
+      .setPosition(20+(i*50), 510)
       .setSize(40, 19);
 
     // clockwise
     cp5.addBang("cp5_cw"+i)
       .setLabel(labels[i])
       .setColorForeground( color(50) )
-      .setPosition(20+(i*50), 500)
+      .setPosition(20+(i*50), 530)
       .setSize(40, 20);
   }
 
@@ -176,6 +186,10 @@ void cp5_sync(boolean b) {
       t.setBroadcast(true);
       println("Must calibrate motors");
     }
+  }
+  else {
+    // turn off sync
+    system.isSendingData = false;
   }
 }
 void cp5_wake(boolean b) {
