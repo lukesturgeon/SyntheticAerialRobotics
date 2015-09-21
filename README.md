@@ -24,7 +24,7 @@ A working sketch that allows serial communication to control and calibrate four 
 - ?l : get locked status
 - ?s : get sleep status
 - ?c : et calibration status (all four motors)
-- ?mm : get length in MM (all four motors)
+- ?mm : get length in steps, mm not supported yet (all four motors)
 
 ---
 
@@ -32,6 +32,9 @@ A working sketch that allows serial communication to control and calibrate four 
 
 #### SyntheticAerialRoboticsInterface
 A working sketch to visualise and measure the position of the actor in 3D space. Using real-world measurements in CM to construct the box, all values afterwards will work at that scale.
+
+#### SyntheticTemperaments_Solo
+A non-interactive working sketch to visualise and output the cable lenght (in mm) to control a 4-point mechanical pulley system. Built specifically for the Laboratory Gallery space in Spokane. This non interactive version includes a timed performance mode that randomises the forces to move the actor around the space, with a 5 minute sleep cycle to let the stepper motors rest.
 
 #### single_stepper_controller
 A working sketch that includes all basic interface elements necessary to interact with a single motor.
