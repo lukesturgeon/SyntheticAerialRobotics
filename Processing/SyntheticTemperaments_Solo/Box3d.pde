@@ -21,6 +21,12 @@ class Box3d {
     z = (frontMargin + backMargin) * 0.5;
   }
   
+  void setBottom(float bottom) {
+    bottomMargin = bottom;
+    h = abs(topMargin) + bottomMargin;
+    y = (bottomMargin + topMargin) * 0.5;
+  }
+  
   void draw() {
     pushMatrix();
     translate(x,y,z);

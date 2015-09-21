@@ -59,6 +59,6 @@ class Motor3d extends PVector {
   }
 
   int getLengthMM() {
-    return int(_length * 100);
+    return int(_length * 10);
   }
 }
